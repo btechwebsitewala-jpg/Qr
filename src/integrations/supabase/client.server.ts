@@ -29,19 +29,17 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
-function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env['SUPABASE_URL'];
-  const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+const DEFAULT_SUPABASE_URL = "https://sdupbksjqgjxarabilhh.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdXBia3NqcWdqeGFyYWJpbGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0OTUwMTIsImV4cCI6MjEwMzA3MTAxMn0.PO6-IbiMQTkJ4-SYz6ZidP9w1y_4wLAeyaf0c9fod_M";
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
-  }
+function createSupabaseAdminClient() {
+  const procEnv = typeof process !== 'undefined' && process.env ? process.env : ({} as Record<string, string | undefined>);
+  const SUPABASE_URL = procEnv['SUPABASE_URL'] || procEnv['VITE_SUPABASE_URL'] || DEFAULT_SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY =
+    procEnv['SUPABASE_SERVICE_ROLE_KEY'] ||
+    procEnv['SUPABASE_PUBLISHABLE_KEY'] ||
+    procEnv['VITE_SUPABASE_PUBLISHABLE_KEY'] ||
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     global: {

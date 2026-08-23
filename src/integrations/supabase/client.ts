@@ -27,21 +27,26 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 
-function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env['VITE_SUPABASE_URL'] || process.env['SUPABASE_URL'];
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'];
+const DEFAULT_SUPABASE_URL = "https://sdupbksjqgjxarabilhh.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdXBia3NqcWdqeGFyYWJpbGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0OTUwMTIsImV4cCI6MjEwMzA3MTAxMn0.PO6-IbiMQTkJ4-SYz6ZidP9w1y_4wLAeyaf0c9fod_M";
 
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
-  }
+function createSupabaseClient() {
+  const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : ({} as Record<string, string | undefined>);
+  const procEnv = typeof process !== 'undefined' && process.env ? process.env : ({} as Record<string, string | undefined>);
+
+  const SUPABASE_URL =
+    env['VITE_SUPABASE_URL'] ||
+    env['SUPABASE_URL'] ||
+    procEnv['VITE_SUPABASE_URL'] ||
+    procEnv['SUPABASE_URL'] ||
+    DEFAULT_SUPABASE_URL;
+
+  const SUPABASE_PUBLISHABLE_KEY =
+    env['VITE_SUPABASE_PUBLISHABLE_KEY'] ||
+    env['SUPABASE_PUBLISHABLE_KEY'] ||
+    procEnv['VITE_SUPABASE_PUBLISHABLE_KEY'] ||
+    procEnv['SUPABASE_PUBLISHABLE_KEY'] ||
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: {
