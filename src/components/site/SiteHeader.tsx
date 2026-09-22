@@ -45,12 +45,12 @@ const ABOUT_ITEMS = [
 ] as const;
 
 const INDUSTRY_ITEMS = [
-  { to: "/types?type=url", label: "Restaurants & Menus", badge: "Popular" },
-  { to: "/types?type=url", label: "Retail & E-Commerce", badge: "Sales" },
-  { to: "/types?type=location", label: "Real Estate & Housing", badge: "Geo" },
-  { to: "/types?type=event", label: "Events & Ticketing", badge: "Passes" },
-  { to: "/types?type=pdf", label: "Education & Campus", badge: "Docs" },
-  { to: "/types?type=vcard", label: "Healthcare & Clinics", badge: "Contact" },
+  { to: "/types" as const, search: { type: "url" }, label: "Restaurants & Menus", badge: "Popular" },
+  { to: "/types" as const, search: { type: "url" }, label: "Retail & E-Commerce", badge: "Sales" },
+  { to: "/types" as const, search: { type: "location" }, label: "Real Estate & Housing", badge: "Geo" },
+  { to: "/types" as const, search: { type: "event" }, label: "Events & Ticketing", badge: "Passes" },
+  { to: "/types" as const, search: { type: "pdf" }, label: "Education & Campus", badge: "Docs" },
+  { to: "/types" as const, search: { type: "vcard" }, label: "Healthcare & Clinics", badge: "Contact" },
 ] as const;
 
 const LANGUAGES = [
@@ -92,10 +92,10 @@ export function SiteHeader() {
   const currentLangLabel = LANGUAGES.find((l) => l.code === selectedLang)?.name ?? "English";
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
+    <header className="sticky top-0 z-50 w-full border-b-2 border-primary/20 bg-background/95 backdrop-blur-xl shadow-lg">
+      <div className="flex h-20 w-full items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
         {/* Left Area: 3-line Menu Button + Logo */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 pl-4 sm:pl-6">
           {/* Hamburger Menu on the LEFT (Opens Slide-out Drawer) - Mobile Only */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -201,6 +201,7 @@ export function SiteHeader() {
                       <Link
                         key={item.label}
                         to={item.to}
+                        search={item.search}
                         onClick={() => setOpen(false)}
                         className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
                       >
@@ -326,7 +327,7 @@ export function SiteHeader() {
         </div>
 
         {/* Center Desktop Quick Links (For widescreen desktop viewports) */}
-        <nav className="hidden items-center gap-1 xl:flex">
+        <nav className="hidden items-center gap-1 lg:flex xl:flex">
           {/* About BT-QR Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none data-[state=open]:bg-secondary data-[state=open]:text-foreground">
@@ -383,7 +384,7 @@ export function SiteHeader() {
             <DropdownMenuContent align="start" className="w-56 rounded-2xl border-border bg-card/95 p-2 backdrop-blur-md shadow-brand">
               {INDUSTRY_ITEMS.map((item) => (
                 <DropdownMenuItem key={item.label} asChild className="rounded-xl px-3 py-2 cursor-pointer">
-                  <Link to={item.to} className="flex items-center justify-between">
+                  <Link to={item.to} search={item.search} className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">{item.label}</span>
                     <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
                       {item.badge}

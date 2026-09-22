@@ -145,37 +145,47 @@ export const QR_TYPES: QRTypeDef[] = [
     id: "image",
     label: "Image",
     icon: ImageIcon,
-    description: "Upload an image, share it via QR",
+    description: "Upload an image or paste an image link",
     isUpload: true,
     fields: [
       {
+        name: "url",
+        label: "Image URL or link",
+        kind: "url",
+        placeholder: "https://example.com/photo.jpg (or upload below)",
+      },
+      {
         name: "file",
-        label: "Image file",
+        label: "…or upload an image file",
         kind: "file",
         accept: "image/*",
-        required: true,
         help: "PNG, JPG, WEBP or GIF up to 10 MB",
       },
     ],
-    encode: (v) => (v.fileUrl ?? "").trim(),
+    encode: (v) => (v.url?.trim() ? normalizeUrl(v.url ?? "") : (v.fileUrl ?? "").trim()),
   },
   {
     id: "pdf",
     label: "PDF",
     icon: FileText,
-    description: "Share a PDF document",
+    description: "Share a PDF document or document link",
     isUpload: true,
     fields: [
       {
+        name: "url",
+        label: "PDF URL / Drive link",
+        kind: "url",
+        placeholder: "https://example.com/menu.pdf (or upload below)",
+      },
+      {
         name: "file",
-        label: "PDF file",
+        label: "…or upload a PDF file",
         kind: "file",
         accept: "application/pdf",
-        required: true,
         help: "PDF up to 10 MB",
       },
     ],
-    encode: (v) => (v.fileUrl ?? "").trim(),
+    encode: (v) => (v.url?.trim() ? normalizeUrl(v.url ?? "") : (v.fileUrl ?? "").trim()),
   },
   {
     id: "video",
@@ -186,9 +196,9 @@ export const QR_TYPES: QRTypeDef[] = [
     fields: [
       {
         name: "url",
-        label: "Video link (YouTube, Vimeo…)",
+        label: "Video link (YouTube, Vimeo, Drive…)",
         kind: "url",
-        placeholder: "https://youtube.com/watch?v=…",
+        placeholder: "https://youtube.com/watch?v=… (or upload below)",
       },
       {
         name: "file",
@@ -232,7 +242,7 @@ export const QR_TYPES: QRTypeDef[] = [
         "END:VCARD",
       ]
         .filter(Boolean)
-        .join("\n");
+        .join("\r\n");
     },
   },
   {
@@ -316,9 +326,13 @@ export const QR_TYPES: QRTypeDef[] = [
         placeholder: "+919876543210",
         required: true,
       },
-      { name: "message", label: "Message", kind: "textarea", placeholder: "Your message…" },
+      { name: "message", label: "Message (optional)", kind: "textarea", placeholder: "Your message…" },
     ],
-    encode: (v) => `SMSTO:${digits(v.phone ?? "")}:${(v.message ?? "").trim()}`,
+    encode: (v) => {
+      const p = digits(v.phone ?? "");
+      const msg = (v.message ?? "").trim();
+      return msg ? `SMSTO:${p}:${msg}` : `SMSTO:${p}`;
+    },
   },
   {
     id: "location",
@@ -328,9 +342,9 @@ export const QR_TYPES: QRTypeDef[] = [
     fields: [
       {
         name: "address",
-        label: "Address or place",
+        label: "Address, Place or Google Maps Link",
         kind: "text",
-        placeholder: "Gateway of India, Mumbai",
+        placeholder: "Gateway of India, Mumbai or https://maps.app.goo.gl/…",
       },
       { name: "lat", label: "Latitude (optional)", kind: "text", placeholder: "18.9220" },
       { name: "lng", label: "Longitude (optional)", kind: "text", placeholder: "72.8347" },
@@ -342,7 +356,11 @@ export const QR_TYPES: QRTypeDef[] = [
         )}`;
       }
       const q = (v.address ?? "").trim();
-      return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : "";
+      if (!q) return "";
+      if (/^https?:\/\//i.test(q) || q.includes("maps.app.goo.gl") || q.includes("goo.gl/maps")) {
+        return normalizeUrl(q);
+      }
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
     },
   },
   {
@@ -364,9 +382,9 @@ export const QR_TYPES: QRTypeDef[] = [
         label: "Encryption",
         kind: "select",
         options: [
-          { label: "WPA / WPA2", value: "WPA" },
+          { label: "WPA / WPA2 / WPA3", value: "WPA" },
           { label: "WEP", value: "WEP" },
-          { label: "None", value: "nopass" },
+          { label: "None (Open)", value: "nopass" },
         ],
       },
       {
@@ -402,13 +420,19 @@ export const QR_TYPES: QRTypeDef[] = [
           { label: "YouTube", value: "youtube" },
           { label: "LinkedIn", value: "linkedin" },
           { label: "X (Twitter)", value: "x" },
+          { label: "Telegram", value: "telegram" },
+          { label: "TikTok", value: "tiktok" },
+          { label: "GitHub", value: "github" },
+          { label: "Threads", value: "threads" },
+          { label: "Snapchat", value: "snapchat" },
+          { label: "Pinterest", value: "pinterest" },
         ],
       },
       {
         name: "handle",
         label: "Profile URL or username",
         kind: "text",
-        placeholder: "@yourbrand",
+        placeholder: "@yourbrand or profile link",
         required: true,
       },
     ],
@@ -423,8 +447,14 @@ export const QR_TYPES: QRTypeDef[] = [
         youtube: "https://youtube.com/@",
         linkedin: "https://linkedin.com/in/",
         x: "https://x.com/",
+        telegram: "https://t.me/",
+        tiktok: "https://tiktok.com/@",
+        github: "https://github.com/",
+        threads: "https://threads.net/@",
+        snapchat: "https://snapchat.com/add/",
+        pinterest: "https://pinterest.com/",
       };
-      return `${base[v.network || "instagram"]}${handle}`;
+      return `${base[v.network || "instagram"] ?? "https://instagram.com/"}${handle}`;
     },
   },
   {
@@ -451,7 +481,7 @@ export const QR_TYPES: QRTypeDef[] = [
     fields: [
       {
         name: "url",
-        label: "App link",
+        label: "App link (Play Store / App Store)",
         kind: "url",
         placeholder: "https://play.google.com/store/apps/…",
         required: true,
@@ -463,18 +493,23 @@ export const QR_TYPES: QRTypeDef[] = [
     id: "file",
     label: "File",
     icon: Upload,
-    description: "Share any downloadable file",
+    description: "Share any downloadable file or document",
     isUpload: true,
     fields: [
       {
+        name: "url",
+        label: "File URL / Cloud link",
+        kind: "url",
+        placeholder: "https://example.com/archive.zip (or upload below)",
+      },
+      {
         name: "file",
-        label: "Choose a file",
+        label: "…or upload a file",
         kind: "file",
-        required: true,
         help: "Any file type up to 10 MB",
       },
     ],
-    encode: (v) => (v.fileUrl ?? "").trim(),
+    encode: (v) => (v.url?.trim() ? normalizeUrl(v.url ?? "") : (v.fileUrl ?? "").trim()),
   },
   {
     id: "event",
@@ -500,11 +535,17 @@ export const QR_TYPES: QRTypeDef[] = [
       const stamp = (date?: string, time?: string) => {
         if (!date) return "";
         const d = date.replace(/-/g, "");
-        const t = (time || "09:00").replace(/:/g, "") + "00";
-        return `${d}T${t}`;
+        const parts = (time || "09:00").split(":");
+        const hh = (parts[0] || "09").padStart(2, "0");
+        const mm = (parts[1] || "00").padStart(2, "0");
+        const ss = (parts[2] || "00").padStart(2, "0");
+        return `${d}T${hh}${mm}${ss}`;
       };
       const dtStart = stamp(v.date, v.start);
-      const dtEnd = stamp(v.endDate || v.date, v.end || v.start);
+      let dtEnd = "";
+      if (v.endDate || v.end) {
+        dtEnd = stamp(v.endDate || v.date, v.end || v.start);
+      }
       if (!dtStart) return "";
       return [
         "BEGIN:VCALENDAR",
@@ -519,7 +560,7 @@ export const QR_TYPES: QRTypeDef[] = [
         "END:VCALENDAR",
       ]
         .filter(Boolean)
-        .join("\n");
+        .join("\r\n");
     },
   },
 ];
@@ -549,8 +590,16 @@ export function validateQRValues(
   values: QRValues,
 ): string | null {
   const def = getQRType(id);
-  if (def.isUpload && !values.fileUrl && id !== "video") {
-    return "Upload a file to continue";
+  if (def.isUpload && !values.fileUrl && !values.url?.trim()) {
+    return "Enter a link or upload a file to continue";
+  }
+  if (id === "location") {
+    if (!values.address?.trim() && (!values.lat?.trim() || !values.lng?.trim())) {
+      return "Enter an address, Maps link, or latitude & longitude";
+    }
+    if ((values.lat?.trim() && !values.lng?.trim()) || (!values.lat?.trim() && values.lng?.trim())) {
+      return "Both latitude and longitude are required";
+    }
   }
   for (const field of def.fields) {
     if (!field.required) continue;
@@ -564,7 +613,10 @@ export function validateQRValues(
     return "Enter a valid email address";
   }
   if ((id === "phone" || id === "whatsapp" || id === "sms") && digits(values.phone ?? "").length < 7) {
-    return "Enter a valid phone number";
+    return "Enter a valid phone number (at least 7 digits)";
+  }
+  if (id === "wifi" && (values.encryption || "WPA") !== "nopass" && !values.password?.trim()) {
+    return "Password is required for WPA/WEP WiFi networks";
   }
   return null;
 }

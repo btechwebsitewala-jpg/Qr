@@ -14,15 +14,15 @@ import {
 import logoAsset from "@/assets/bt-qr-logo.png";
 import { Button } from "@/components/ui/button";
 
-const QR_TYPE_LINKS = [
-  { to: "/types?type=url", label: "Website URL" },
-  { to: "/types?type=wifi", label: "WiFi Password" },
-  { to: "/types?type=vcard", label: "vCard Digital Contact" },
-  { to: "/types?type=whatsapp", label: "WhatsApp Direct Chat" },
-  { to: "/types?type=pdf", label: "PDF & Documents" },
-  { to: "/types?type=social", label: "Social Media Hub" },
-  { to: "/types", label: "Explore all 17+ Types →" },
-] as const;
+const QR_TYPE_LINKS: { to: "/types"; search: { type?: string }; label: string }[] = [
+  { to: "/types", search: { type: "url" }, label: "Website URL" },
+  { to: "/types", search: { type: "wifi" }, label: "WiFi Password" },
+  { to: "/types", search: { type: "vcard" }, label: "vCard Digital Contact" },
+  { to: "/types", search: { type: "whatsapp" }, label: "WhatsApp Direct Chat" },
+  { to: "/types", search: { type: "pdf" }, label: "PDF & Documents" },
+  { to: "/types", search: { type: "social" }, label: "Social Media Hub" },
+  { to: "/types", search: {}, label: "Explore all 17+ Types →" },
+];
 
 const FEATURE_LINKS = [
   { to: "/", label: "QR Code Generator" },
@@ -58,68 +58,68 @@ export function SiteFooter() {
   };
 
   return (
-    <footer className="mt-20 border-t border-border/70 bg-card/60 backdrop-blur-md">
+    <footer className="mt-24 border-t-2 border-primary/20 bg-card/90 backdrop-blur-xl">
       {/* Top Value Strip */}
-      <div className="border-b border-border/60 bg-secondary/30 py-6">
+      <div className="border-b-2 border-primary/10 bg-gradient-to-r from-primary/5 to-accent/5 py-8">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex flex-wrap items-center gap-6 text-xs sm:text-sm text-muted-foreground font-medium">
+          <div className="flex flex-wrap items-center gap-8 text-sm sm:text-base text-muted-foreground font-semibold">
             <span className="flex items-center gap-2 text-foreground">
-              <ShieldCheck className="size-4 text-primary" /> 100% Watermark-Free
+              <ShieldCheck className="size-5 text-primary" /> 100% Watermark-Free
             </span>
             <span className="flex items-center gap-2 text-foreground">
-              <Zap className="size-4 text-primary" /> Instant Vector Downloads (SVG/PDF/EPS)
+              <Zap className="size-5 text-primary" /> Instant Vector Downloads
             </span>
             <span className="flex items-center gap-2 text-foreground">
-              <Sparkles className="size-4 text-primary" /> 3D Avatar Standee Mode
+              <Sparkles className="size-5 text-primary" /> 3D Avatar Standee Mode
             </span>
             <span className="flex items-center gap-2 text-foreground">
-              <Globe className="size-4 text-primary" /> UPI &amp; RuPay Supported
+              <Globe className="size-5 text-primary" /> UPI &amp; RuPay Supported
             </span>
           </div>
 
           <Button
             variant="ghost"
-            size="sm"
+            size="lg"
             onClick={scrollToTop}
-            className="gap-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground"
+            className="gap-2 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-primary/10"
           >
             <span>Back to top</span>
-            <ArrowUp className="size-3.5" />
+            <ArrowUp className="size-4" />
           </Button>
         </div>
       </div>
 
       {/* Main Footer Links Matrix */}
-      <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-5 sm:grid-cols-2">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-20 md:grid-cols-5 sm:grid-cols-2">
         {/* Brand Column */}
-        <div className="md:col-span-2 space-y-4">
-          <Link to="/" className="flex items-center gap-2.5">
+        <div className="md:col-span-2 space-y-6">
+          <Link to="/" className="flex items-center gap-3">
             <img
               src={logoAsset}
               alt="BT-QR logo"
-              className="size-9 rounded-xl bg-white object-contain p-0.5 shadow-sm ring-1 ring-border"
+              className="size-12 rounded-2xl bg-white object-contain p-1 shadow-lg ring-2 ring-primary/20"
             />
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
+            <span className="font-display text-2xl font-black tracking-tight text-foreground">
               BT-QR
             </span>
           </Link>
 
-          <p className="max-w-sm text-sm text-muted-foreground leading-relaxed">
+          <p className="max-w-sm text-base text-muted-foreground leading-relaxed">
             The next-generation smart QR code platform. Generate, customize, and track commercial-grade QR codes with vector printing, full-body 3D character avatars, and live scan analytics.
           </p>
 
-          <div className="pt-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="pt-4">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
               Customer Support
             </h4>
             <a
               href="mailto:support.btqrcodegenerate@gmail.com"
-              className="mt-1.5 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              className="mt-3 inline-flex items-center gap-2 text-base font-bold text-primary hover:underline"
             >
-              <Mail className="size-4" />
+              <Mail className="size-5" />
               <span>support.btqrcodegenerate@gmail.com</span>
             </a>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               Response within 24 hours · Monday to Saturday
             </p>
           </div>
@@ -127,13 +127,14 @@ export function SiteFooter() {
 
         {/* QR Types */}
         <div>
-          <h3 className="font-display text-sm font-bold text-foreground">Popular QR Types</h3>
-          <ul className="mt-3.5 space-y-2.5 text-xs sm:text-sm text-muted-foreground">
+          <h3 className="font-display text-base font-bold text-foreground">Popular QR Types</h3>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {QR_TYPE_LINKS.map((item) => (
               <li key={item.label}>
                 <Link
                   to={item.to}
-                  className="transition-colors hover:text-primary hover:underline"
+                  search={item.search}
+                  className="font-medium transition-colors hover:text-primary hover:underline decoration-2"
                 >
                   {item.label}
                 </Link>
@@ -144,13 +145,13 @@ export function SiteFooter() {
 
         {/* Features & Tools */}
         <div>
-          <h3 className="font-display text-sm font-bold text-foreground">Features &amp; Tools</h3>
-          <ul className="mt-3.5 space-y-2.5 text-xs sm:text-sm text-muted-foreground">
+          <h3 className="font-display text-base font-bold text-foreground">Features &amp; Tools</h3>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {FEATURE_LINKS.map((item) => (
               <li key={item.label}>
                 <Link
                   to={item.to}
-                  className="transition-colors hover:text-primary hover:underline"
+                  className="font-medium transition-colors hover:text-primary hover:underline decoration-2"
                 >
                   {item.label}
                 </Link>
@@ -161,13 +162,13 @@ export function SiteFooter() {
 
         {/* Industries & Pricing */}
         <div>
-          <h3 className="font-display text-sm font-bold text-foreground">Solutions &amp; Pricing</h3>
-          <ul className="mt-3.5 space-y-2.5 text-xs sm:text-sm text-muted-foreground">
+          <h3 className="font-display text-base font-bold text-foreground">Solutions &amp; Pricing</h3>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {COMPANY_LINKS.map((item) => (
               <li key={item.label}>
                 <Link
                   to={item.to}
-                  className="transition-colors hover:text-primary hover:underline"
+                  className="font-medium transition-colors hover:text-primary hover:underline decoration-2"
                 >
                   {item.label}
                 </Link>
@@ -178,28 +179,28 @@ export function SiteFooter() {
       </div>
 
       {/* Bottom Copyright & Trust Bar */}
-      <div className="border-t border-border/70 py-6 bg-background/80">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
+      <div className="border-t-2 border-primary/10 py-8 bg-background/95">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
             <span>© {new Date().getFullYear()} BT-QR Platform. Built with</span>
-            <Heart className="size-3.5 text-rose-500 fill-rose-500" />
+            <Heart className="size-4 text-rose-500 fill-rose-500" />
             <span>for creators &amp; businesses worldwide.</span>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link to="/support" className="hover:text-foreground hover:underline">
+          <div className="flex flex-wrap items-center justify-center gap-6 font-medium">
+            <Link to="/support" className="hover:text-foreground hover:underline decoration-2">
               Privacy Policy
             </Link>
             <span>•</span>
-            <Link to="/support" className="hover:text-foreground hover:underline">
+            <Link to="/support" className="hover:text-foreground hover:underline decoration-2">
               Terms of Service
             </Link>
             <span>•</span>
-            <Link to="/support" className="hover:text-foreground hover:underline">
+            <Link to="/support" className="hover:text-foreground hover:underline decoration-2">
               Help Center
             </Link>
             <span>•</span>
-            <Link to="/pricing" className="hover:text-foreground hover:underline">
+            <Link to="/pricing" className="hover:text-foreground hover:underline decoration-2">
               GST Invoicing
             </Link>
           </div>

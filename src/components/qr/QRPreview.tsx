@@ -13,7 +13,7 @@ interface QRPreviewProps {
 export function QRPreview({ value, style, size = 320, className }: QRPreviewProps) {
   const svg = useMemo(() => {
     try {
-      return buildQRSvg({ value: value || "https://qrverse.app", style, size });
+      return buildQRSvg({ value: value || "https://bt-qr.app", style, size });
     } catch {
       return "";
     }

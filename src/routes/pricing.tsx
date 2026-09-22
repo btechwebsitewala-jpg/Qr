@@ -12,7 +12,7 @@ import {
   Download,
   CreditCard,
 } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -375,7 +375,7 @@ function Pricing() {
                 </thead>
                 <tbody className="divide-y divide-border/60 text-sm">
                   {COMPARISON_CATEGORIES.map((cat) => (
-                    <tr key={cat.category} className="contents">
+                    <Fragment key={cat.category}>
                       <tr className="bg-secondary/30">
                         <td colSpan={4} className="p-3 px-5 font-display text-xs font-bold uppercase tracking-wider text-primary">
                           {cat.category}
@@ -395,7 +395,7 @@ function Pricing() {
                               <span className="font-medium text-foreground">{row.free}</span>
                             )}
                           </td>
-                          <td className="p-4 sm:p-5 text-center text-muted-foreground">
+                          <td className="p-4 sm:p-5 text-center">
                             {typeof row.lite === "boolean" ? (
                               row.lite ? (
                                 <Check className="mx-auto size-5 text-primary" />
@@ -419,7 +419,7 @@ function Pricing() {
                           </td>
                         </tr>
                       ))}
-                    </tr>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

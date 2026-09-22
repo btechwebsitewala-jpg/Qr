@@ -1,0 +1,36 @@
+[
+  {
+    "short_code": "btweb",
+    "target_url": "https://btechwebsitewala.com",
+    "scan_count": 250,
+    "updated_at": "2026-09-22T21:05:23.478Z"
+  },
+  {
+    "short_code": "sample",
+    "target_url": "https://bt-qr.app",
+    "name": "Sample QR",
+    "scan_count": 12,
+    "updated_at": "2026-09-20T00:00:00.000Z"
+  },
+  {
+    "short_code": "doc33",
+    "target_url": "https://example.com/portfolio.pdf",
+    "name": "Product Portfolio Catalog",
+    "scan_count": 412,
+    "updated_at": "2026-09-20T00:00:00.000Z"
+  },
+  {
+    "short_code": "wifi99",
+    "target_url": "https://bt-qr.app",
+    "name": "Office Wi-Fi Zone",
+    "scan_count": 94,
+    "updated_at": "2026-09-20T00:00:00.000Z"
+  },
+  {
+    "short_code": "a8fdecp",
+    "target_url": "https://supabase.com/dashboard/org/myfsgexjnnxomoerfhas",
+    "name": "URL / Link QR",
+    "scan_count": 3,
+    "updated_at": "2026-09-22T21:15:56.997Z"
+  }
+]

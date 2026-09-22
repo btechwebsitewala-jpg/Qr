@@ -35,8 +35,11 @@ export function ContentForm({ typeId, values, onChange }: ContentFormProps) {
       onChange({ fileUrl: url, fileName: file.name });
       toast.success("File uploaded", { description: file.name });
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Please try again";
       toast.error("Upload failed", {
-        description: error instanceof Error ? error.message : "Please try again",
+        description: msg.includes("log in")
+          ? "Please log in to host files online, or paste a link directly above."
+          : msg,
       });
     } finally {
       setUploading(false);
@@ -76,10 +79,19 @@ export function ContentForm({ typeId, values, onChange }: ContentFormProps) {
                   {uploading ? "Uploading…" : "Choose file"}
                 </Button>
                 {values['fileUrl'] ? (
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <CheckCircle2 className="size-4 text-primary" />
-                    {values['fileName'] ?? "File ready"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-sm font-medium text-foreground">
+                      <CheckCircle2 className="size-4 text-primary" />
+                      {values['fileName'] ?? "File uploaded"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onChange({ fileUrl: "", fileName: "" })}
+                      className="text-xs text-muted-foreground hover:text-destructive hover:underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 ) : (
                   <span className="text-sm text-muted-foreground">{field.help}</span>
                 )}

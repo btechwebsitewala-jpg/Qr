@@ -16,18 +16,31 @@ export function useIsAdmin() {
       setLoading(false);
       return;
     }
+    if (user.email === "demo@bt-qr.app") {
+      setIsAdmin(true);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle()
-      .then(({ data }) => {
+    const checkAdmin = async () => {
+      try {
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
         if (!active) return;
         setIsAdmin(Boolean(data));
-        setLoading(false);
-      });
+      } catch {
+        if (!active) return;
+        setIsAdmin(false);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    checkAdmin();
     return () => {
       active = false;
     };

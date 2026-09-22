@@ -23,7 +23,13 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-async function svgToCanvas(svg: string, width: number, height: number, bg: string) {
+async function svgToCanvas(
+  svg: string,
+  width: number,
+  height: number,
+  bg: string,
+  isTransparent = false,
+) {
   const blobUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
   try {
     const img = new Image();
@@ -38,8 +44,10 @@ async function svgToCanvas(svg: string, width: number, height: number, bg: strin
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas is not available");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, width, height);
+    if (!isTransparent) {
+      ctx.fillStyle = bg || "#FFFFFF";
+      ctx.fillRect(0, 0, width, height);
+    }
     ctx.drawImage(img, 0, 0, width, height);
     return canvas;
   } finally {
@@ -109,7 +117,8 @@ export async function downloadQR({
     return;
   }
 
-  const canvas = await svgToCanvas(svg, width, height, style.bg);
+  const isTransparent = Boolean(style.bgTransparent && format === "png");
+  const canvas = await svgToCanvas(svg, width, height, style.bg, isTransparent);
 
   if (format === "pdf") {
     const { jsPDF } = await import("jspdf");

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "scan-a8fdecp-1790111756998-05d8",
+    "short_code": "a8fdecp",
+    "scanned_at": "2026-09-22T21:15:56.998Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-a8fdecp-1790111693760-uvkr",
+    "short_code": "a8fdecp",
+    "scanned_at": "2026-09-22T21:14:53.760Z",
+    "device_type": "Mobile",
+    "browser": "Safari",
+    "country": "IN",
+    "city": "New Delhi",
+    "referrer": "https://instagram.com"
+  }
+]

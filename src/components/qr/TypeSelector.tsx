@@ -1,11 +1,5 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
-
-import { Button } from "@/components/ui/button";
 import { QR_TYPES, type QRTypeId } from "@/lib/qr/config";
 import { cn } from "@/lib/utils";
-
-const VISIBLE = 8;
 
 interface TypeSelectorProps {
   value: QRTypeId;
@@ -13,56 +7,45 @@ interface TypeSelectorProps {
 }
 
 export function TypeSelector({ value, onChange }: TypeSelectorProps) {
-  const [expanded, setExpanded] = useState(false);
-  const types = expanded ? QR_TYPES : QR_TYPES.slice(0, VISIBLE);
-
   return (
-    <div>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-        {types.map((type) => {
-          const Icon = type.icon;
-          const active = type.id === value;
-          return (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => onChange(type.id)}
-              aria-pressed={active}
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
+      {QR_TYPES.map((type) => {
+        const Icon = type.icon;
+        const active = type.id === value;
+        return (
+          <button
+            key={type.id}
+            type="button"
+            onClick={() => onChange(type.id)}
+            aria-pressed={active}
+            className={cn(
+              "group relative flex flex-col items-center justify-center gap-2.5 rounded-2xl sm:rounded-3xl border p-4 sm:p-5 text-center transition-all duration-200 cursor-pointer min-h-[96px] sm:min-h-[106px]",
+              active
+                ? "border-2 border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                : "border-border/80 bg-card hover:border-primary/40 hover:bg-secondary/40 hover:shadow-sm",
+            )}
+          >
+            <span
               className={cn(
-                "group flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-all",
+                "flex size-11 sm:size-12 items-center justify-center rounded-full transition-all duration-200",
                 active
-                  ? "border-primary bg-primary/5 shadow-brand"
-                  : "border-border bg-card hover:border-primary/40 hover:bg-secondary/60",
+                  ? "bg-primary text-primary-foreground shadow-md scale-105"
+                  : "bg-secondary/80 text-primary group-hover:bg-primary/15 group-hover:scale-105",
               )}
             >
-              <span
-                className={cn(
-                  "flex size-10 items-center justify-center rounded-xl transition-colors",
-                  active
-                    ? "bg-brand-gradient text-primary-foreground"
-                    : "bg-secondary text-primary group-hover:bg-primary/10",
-                )}
-              >
-                <Icon className="size-5" />
-              </span>
-              <span className="text-xs font-semibold leading-tight">{type.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="mt-3 flex justify-center">
-        <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)}>
-          {expanded ? (
-            <>
-              Show less <ChevronUp className="ml-1 size-4" />
-            </>
-          ) : (
-            <>
-              View all {QR_TYPES.length} types <ChevronDown className="ml-1 size-4" />
-            </>
-          )}
-        </Button>
-      </div>
+              <Icon className="size-5 sm:size-6" />
+            </span>
+            <span
+              className={cn(
+                "text-xs sm:text-sm font-semibold leading-tight transition-colors",
+                active ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground",
+              )}
+            >
+              {type.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
