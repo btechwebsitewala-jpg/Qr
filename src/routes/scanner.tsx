@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import jsQR from "jsqr";
 import {
   AlertCircle,
@@ -13,6 +13,8 @@ import {
   Globe,
   Image as ImageIcon,
   Loader2,
+  Lock,
+  LogIn,
   Mail,
   Phone,
   RefreshCw,
@@ -30,6 +32,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const TITLE = "Free Online QR Code & Barcode Scanner — BT-QR";
@@ -294,6 +297,7 @@ async function decodeImageFile(file: File): Promise<string | null> {
 }
 
 function Scanner() {
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -371,6 +375,12 @@ function Scanner() {
 
   const startCamera = useCallback(
     async (facing: "environment" | "user" = facingMode) => {
+      if (!user) {
+        toast.error("Authentication required", {
+          description: "Please log in to use the camera scanner.",
+        });
+        return;
+      }
       stop();
       setErrorMessage(null);
       setStartingCamera(true);
@@ -462,6 +472,12 @@ function Scanner() {
 
   const handleImageFile = useCallback(
     async (file: File) => {
+      if (!user) {
+        toast.error("Authentication required", {
+          description: "Please log in to upload and scan QR images.",
+        });
+        return;
+      }
       if (!file.type.startsWith("image/")) {
         toast.error("Please upload an image file (PNG, JPG, WebP, SVG, Screenshot)");
         return;
@@ -545,13 +561,38 @@ function Scanner() {
           </p>
         </div>
 
+        {!user ? (
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 shadow-xs">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+                <Lock className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">
+                  Sign in required to use QR scanner
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Create a free account or log in to access the camera scanner and screenshot decoding tools.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button asChild size="sm" className="bg-brand-gradient text-primary-foreground font-bold h-9 rounded-xl px-4 shadow-sm hover:opacity-95">
+                <Link to="/auth" search={{ redirect: "/scanner" }}>
+                  <LogIn className="mr-1.5 size-4" /> Log In / Sign Up
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         {/* Main Scanner Container Card */}
         <div className="mt-8 overflow-hidden rounded-3xl border-2 border-border/80 bg-card p-4 sm:p-7 shadow-2xl backdrop-blur-xl">
           {/* Viewport Box */}
           <div
             onDragOver={(e) => {
               e.preventDefault();
-              setIsDragOver(true);
+              if (user) setIsDragOver(true);
             }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={(e) => {
@@ -569,100 +610,128 @@ function Scanner() {
                   : "border-border/80 bg-secondary/30",
             )}
           >
-            {/* Live Camera Video */}
-            <video
-              ref={videoRef}
-              muted
-              playsInline
-              autoPlay
-              className={cn("size-full object-cover", scanning ? "block" : "hidden")}
-            />
-
-            {/* Live Camera Reticle & Animated Laser Line */}
-            {scanning ? (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                {/* Dark vignette outer frame */}
-                <div className="relative size-60 sm:size-72 rounded-2xl border-2 border-primary/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
-                  {/* Four Corner Target Brackets */}
-                  <span className="absolute -left-1 -top-1 size-6 border-l-4 border-t-4 border-primary rounded-tl" />
-                  <span className="absolute -right-1 -top-1 size-6 border-r-4 border-t-4 border-primary rounded-tr" />
-                  <span className="absolute -bottom-1 -left-1 size-6 border-b-4 border-l-4 border-primary rounded-bl" />
-                  <span className="absolute -bottom-1 -right-1 size-6 border-b-4 border-r-4 border-primary rounded-br" />
-
-                  {/* Scanning Laser Beam */}
-                  <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-bounce" />
+            {!user ? (
+              <div className="p-8 text-center max-w-md mx-auto">
+                <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-brand-gradient text-primary-foreground shadow-lg mb-4">
+                  <Lock className="size-8" />
                 </div>
-
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
-                  Align QR code inside square
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground">
+                  Login Required to Scan QR Codes
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Camera scanning and in-browser image decoding are restricted to registered users. Sign in or register for free to unlock instant QR code scanning.
+                </p>
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+                  <Button asChild className="w-full sm:w-auto bg-brand-gradient text-primary-foreground font-bold shadow-md rounded-xl h-11 px-6">
+                    <Link to="/auth" search={{ redirect: "/scanner" }}>
+                      <LogIn className="mr-2 size-4" /> Log In to Scan
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full sm:w-auto rounded-xl h-11 px-6">
+                    <Link to="/auth" search={{ redirect: "/scanner" }}>
+                      Create Free Account
+                    </Link>
+                  </Button>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <>
+                {/* Live Camera Video */}
+                <video
+                  ref={videoRef}
+                  muted
+                  playsInline
+                  autoPlay
+                  className={cn("size-full object-cover", scanning ? "block" : "hidden")}
+                />
 
-            {/* Floating Top Camera Controls (When Camera is Active) */}
-            {scanning ? (
-              <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-                {hasTorch ? (
-                  <button
-                    type="button"
-                    onClick={toggleTorch}
-                    className="flex size-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-colors cursor-pointer"
-                    title={torchOn ? "Turn Flash Off" : "Turn Flash On"}
-                  >
-                    {torchOn ? <FlashlightOff className="size-4" /> : <Flashlight className="size-4" />}
-                  </button>
+                {/* Live Camera Reticle & Animated Laser Line */}
+                {scanning ? (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    {/* Dark vignette outer frame */}
+                    <div className="relative size-60 sm:size-72 rounded-2xl border-2 border-primary/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
+                      {/* Four Corner Target Brackets */}
+                      <span className="absolute -left-1 -top-1 size-6 border-l-4 border-t-4 border-primary rounded-tl" />
+                      <span className="absolute -right-1 -top-1 size-6 border-r-4 border-t-4 border-primary rounded-tr" />
+                      <span className="absolute -bottom-1 -left-1 size-6 border-b-4 border-l-4 border-primary rounded-bl" />
+                      <span className="absolute -bottom-1 -right-1 size-6 border-b-4 border-r-4 border-primary rounded-br" />
+
+                      {/* Scanning Laser Beam */}
+                      <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-bounce" />
+                    </div>
+
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                      Align QR code inside square
+                    </div>
+                  </div>
                 ) : null}
 
-                <button
-                  type="button"
-                  onClick={flipCamera}
-                  className="flex size-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-colors cursor-pointer"
-                  title="Switch Camera (Front / Back)"
-                >
-                  <FlipHorizontal className="size-4" />
-                </button>
+                {/* Floating Top Camera Controls (When Camera is Active) */}
+                {scanning ? (
+                  <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                    {hasTorch ? (
+                      <button
+                        type="button"
+                        onClick={toggleTorch}
+                        className="flex size-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-colors cursor-pointer"
+                        title={torchOn ? "Turn Flash Off" : "Turn Flash On"}
+                      >
+                        {torchOn ? <FlashlightOff className="size-4" /> : <Flashlight className="size-4" />}
+                      </button>
+                    ) : null}
 
-                <button
-                  type="button"
-                  onClick={stop}
-                  className="flex size-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-colors cursor-pointer"
-                  title="Stop Camera"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            ) : null}
+                    <button
+                      type="button"
+                      onClick={flipCamera}
+                      className="flex size-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-colors cursor-pointer"
+                      title="Switch Camera (Front / Back)"
+                    >
+                      <FlipHorizontal className="size-4" />
+                    </button>
 
-            {/* Analyzing Image Overlay */}
-            {analyzingImage ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center z-10">
-                <Loader2 className="size-10 text-primary animate-spin" />
-                <p className="mt-3 font-display font-bold text-foreground">Analyzing QR code...</p>
-                <p className="text-xs text-muted-foreground mt-1">Multi-scale image scan in progress</p>
-              </div>
-            ) : null}
-
-            {/* Idle State View */}
-            {!scanning && !analyzingImage ? (
-              <div className="p-6 text-center max-w-sm">
-                {uploadedPreview ? (
-                  <div className="mx-auto mb-3 size-24 overflow-hidden rounded-xl border border-border shadow-md">
-                    <img src={uploadedPreview} alt="Uploaded QR preview" className="size-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={stop}
+                      className="flex size-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-colors cursor-pointer"
+                      title="Stop Camera"
+                    >
+                      <X className="size-4" />
+                    </button>
                   </div>
-                ) : (
-                  <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm">
-                    <ScanLine className="size-8" />
-                  </div>
-                )}
+                ) : null}
 
-                <p className="mt-3 font-display text-base font-bold text-foreground">
-                  Ready to Scan
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  Start mobile camera, upload an image file, or drag and drop a screenshot here.
-                </p>
-              </div>
-            ) : null}
+                {/* Analyzing Image Overlay */}
+                {analyzingImage ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center z-10">
+                    <Loader2 className="size-10 text-primary animate-spin" />
+                    <p className="mt-3 font-display font-bold text-foreground">Analyzing QR code...</p>
+                    <p className="text-xs text-muted-foreground mt-1">Multi-scale image scan in progress</p>
+                  </div>
+                ) : null}
+
+                {/* Idle State View */}
+                {!scanning && !analyzingImage ? (
+                  <div className="p-6 text-center max-w-sm">
+                    {uploadedPreview ? (
+                      <div className="mx-auto mb-3 size-24 overflow-hidden rounded-xl border border-border shadow-md">
+                        <img src={uploadedPreview} alt="Uploaded QR preview" className="size-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm">
+                        <ScanLine className="size-8" />
+                      </div>
+                    )}
+
+                    <p className="mt-3 font-display text-base font-bold text-foreground">
+                      Ready to Scan
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      Start mobile camera, upload an image file, or drag and drop a screenshot here.
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
 
           {/* Error Banner if Permission Blocked */}
@@ -679,72 +748,82 @@ function Scanner() {
           ) : null}
 
           {/* Action Buttons Toolbar */}
-          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            {scanning ? (
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-12 rounded-xl text-sm font-bold border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer"
-                onClick={stop}
-              >
-                <X className="mr-2 size-4" /> Stop Camera
+          {!user ? (
+            <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Button asChild size="lg" className="h-12 rounded-xl bg-brand-gradient text-sm font-bold text-primary-foreground shadow-brand cursor-pointer">
+                <Link to="/auth" search={{ redirect: "/scanner" }}>
+                  <Lock className="mr-2 size-4" /> Log In to Use Camera &amp; Image Scanner
+                </Link>
               </Button>
-            ) : (
-              <Button
-                size="lg"
-                disabled={startingCamera || analyzingImage}
-                className="h-12 rounded-xl bg-brand-gradient text-sm font-bold text-primary-foreground shadow-brand cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
-                onClick={() => void startCamera(facingMode)}
-              >
-                {startingCamera ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Camera className="mr-2 size-4" />
-                )}
-                Start Camera
-              </Button>
-            )}
+            </div>
+          ) : (
+            <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {scanning ? (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 rounded-xl text-sm font-bold border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer"
+                  onClick={stop}
+                >
+                  <X className="mr-2 size-4" /> Stop Camera
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  disabled={startingCamera || analyzingImage}
+                  className="h-12 rounded-xl bg-brand-gradient text-sm font-bold text-primary-foreground shadow-brand cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                  onClick={() => void startCamera(facingMode)}
+                >
+                  {startingCamera ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Camera className="mr-2 size-4" />
+                  )}
+                  Start Camera
+                </Button>
+              )}
 
-            {/* Hidden Native File Input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleImageFile(file);
-                e.target.value = "";
-              }}
-            />
+              {/* Hidden Native File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleImageFile(file);
+                  e.target.value = "";
+                }}
+              />
 
-            {/* Upload Image Button */}
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              disabled={startingCamera || analyzingImage}
-              className="h-12 rounded-xl text-sm font-bold border-border/80 hover:bg-secondary cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="mr-2 size-4 text-primary" />
-              Upload Image / Screenshot
-            </Button>
-
-            {/* Camera Switch on Mobile (when scanning) */}
-            {scanning ? (
+              {/* Upload Image Button */}
               <Button
                 type="button"
                 variant="outline"
                 size="lg"
-                className="h-12 rounded-xl text-xs font-semibold cursor-pointer border-border/80"
-                onClick={flipCamera}
+                disabled={startingCamera || analyzingImage}
+                className="h-12 rounded-xl text-sm font-bold border-border/80 hover:bg-secondary cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
               >
-                <FlipHorizontal className="mr-1.5 size-3.5" />
-                Switch to {facingMode === "environment" ? "Front" : "Back"} Camera
+                <Upload className="mr-2 size-4 text-primary" />
+                Upload Image / Screenshot
               </Button>
-            ) : null}
-          </div>
+
+              {/* Camera Switch on Mobile (when scanning) */}
+              {scanning ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="h-12 rounded-xl text-xs font-semibold cursor-pointer border-border/80"
+                  onClick={flipCamera}
+                >
+                  <FlipHorizontal className="mr-1.5 size-3.5" />
+                  Switch to {facingMode === "environment" ? "Front" : "Back"} Camera
+                </Button>
+              ) : null}
+            </div>
+          )}
 
           <p className="mt-3 text-center sm:text-left text-[11px] text-muted-foreground">
             Supports PNG, JPG, WebP, SVG screenshots, receipts &amp; counter standees. Clipboard paste (Ctrl+V) enabled.

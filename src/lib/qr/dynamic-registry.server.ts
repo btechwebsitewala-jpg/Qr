@@ -116,8 +116,17 @@ export function recordDynamicScan(
 ): number {
   const map = loadRegistry();
   const cleanCode = code.toLowerCase().trim();
-  const item = map.get(cleanCode);
-  if (!item) return 0;
+  let item = map.get(cleanCode);
+  if (!item) {
+    item = {
+      short_code: cleanCode,
+      target_url: "https://bt-qr.app",
+      name: `Dynamic QR (${cleanCode})`,
+      scan_count: 0,
+      updated_at: new Date().toISOString(),
+    };
+    map.set(cleanCode, item);
+  }
   item.scan_count = (item.scan_count ?? 0) + 1;
   item.updated_at = new Date().toISOString();
   saveRegistry();

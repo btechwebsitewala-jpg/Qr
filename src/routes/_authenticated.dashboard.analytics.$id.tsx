@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -35,7 +35,14 @@ import { QRPreview } from "@/components/qr/QRPreview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_STYLE, type QRStyle } from "@/lib/qr/render";
-import { getQrCode, listScans, simulateScan } from "@/lib/qr/store";
+import {
+  getQrCode,
+  listScans,
+  makeShortCode,
+  shortUrl,
+  simulateScan,
+  updateQrCode,
+} from "@/lib/qr/store";
 
 export const Route = createFileRoute("/_authenticated/dashboard/analytics/$id")({
   head: () => ({
@@ -93,6 +100,29 @@ function Analytics() {
     }
   };
 
+  const upgradeToDynamic = useMutation({
+    mutationFn: async () => {
+      if (!qr.data) return;
+      const code = qr.data.short_code || makeShortCode(7);
+      const targetUrl = qr.data.target_url || qr.data.encoded_value;
+      await updateQrCode(qr.data.id, {
+        is_dynamic: true,
+        short_code: code,
+        target_url: targetUrl,
+        encoded_value: shortUrl(code),
+      });
+    },
+    onSuccess: async () => {
+      toast.success("Successfully upgraded to Dynamic QR!", {
+        description: "Live scan tracking is now enabled.",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["qr-code", id] });
+      await queryClient.invalidateQueries({ queryKey: ["qr-scans", id] });
+      await queryClient.invalidateQueries({ queryKey: ["qr-codes"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const handleManualRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["qr-code", id] });
     await queryClient.invalidateQueries({ queryKey: ["qr-scans", id] });
@@ -112,8 +142,13 @@ function Analytics() {
         scans: scanList.filter((row) => row.scanned_at.slice(0, 10) === key).length,
       });
     }
+    const currentScans = qr.data?.scan_count ?? 0;
+    const lastDay = days[days.length - 1];
+    if (scanList.length === 0 && currentScans > 0 && lastDay) {
+      lastDay.scans = currentScans;
+    }
     return days;
-  }, [scanList]);
+  }, [scanList, qr.data?.scan_count]);
 
   const byKey = (key: "device_type" | "country" | "browser") => {
     const counts = new Map<string, number>();
@@ -214,14 +249,22 @@ function Analytics() {
             <Badge variant="secondary" className="rounded-xl text-xs">
               {row.is_dynamic ? "Dynamic QR" : "Static QR"}
             </Badge>
-            <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Tracking Active
-            </span>
+            {row.is_dynamic ? (
+              <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Tracking Active
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                Static Standard (Direct Offline)
+              </span>
+            )}
           </div>
 
           <div className="mt-2 space-y-1 text-xs text-muted-foreground font-mono">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-foreground">Scannable Short Link:</span>
+              <span className="font-semibold text-foreground">
+                {row.is_dynamic ? "Scannable Short Link:" : "Direct Encoded Target:"}
+              </span>
               <span className="truncate max-w-[320px] text-primary underline underline-offset-2">
                 {row.encoded_value}
               </span>
@@ -237,6 +280,33 @@ function Analytics() {
           </div>
         </div>
       </div>
+
+      {!row.is_dynamic && (
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 shadow-xs">
+          <div>
+            <h3 className="text-sm font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+              <Sparkles className="size-4 text-amber-500" />
+              This QR code is currently Static
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
+              Static QR codes encode destination data directly in barcode pixels, so user phones open it directly without pinging a tracking redirect server. Upgrade to Dynamic QR to enable real-time scan logging, device breakdowns, and destination updates without reprinting.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="rounded-xl bg-brand-gradient text-primary-foreground font-semibold shadow-brand hover:opacity-95 shrink-0 cursor-pointer gap-1.5"
+            disabled={upgradeToDynamic.isPending}
+            onClick={() => upgradeToDynamic.mutate()}
+          >
+            {upgradeToDynamic.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="size-3.5" />
+            )}
+            Upgrade to Dynamic &amp; Start Tracking
+          </Button>
+        </div>
+      )}
 
       {/* High-Level Stat Cards */}
       <div className="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-4">

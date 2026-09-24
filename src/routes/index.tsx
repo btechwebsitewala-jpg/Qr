@@ -42,8 +42,10 @@ const DESCRIPTION =
   "Free QR code generator for links, WhatsApp, vCard, WiFi, PDF, video, location and 11 more types. Custom colours, logo, frames and PNG, SVG, PDF or EPS download.";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { type?: string } =>
-    typeof search["type"] === "string" ? { type: search["type"] } : {},
+  validateSearch: (search: Record<string, unknown>): { type?: string | undefined; edit?: string | undefined } => ({
+    type: typeof search["type"] === "string" ? search["type"] : undefined,
+    edit: typeof search["edit"] === "string" ? search["edit"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: TITLE },
@@ -142,12 +144,12 @@ const FAQS = [
   {
     question: "Do I need an account to create QR codes?",
     answer:
-      "No account is required to generate and download QR codes instantly. Creating a free account unlocks saving your codes to a private dashboard and tracking live scan analytics.",
+      "Yes. A free BT-QR account is required to generate QR codes, customize frames, download high-resolution vector files, and access our file converter and scanner tools. Registration is 100% free and takes less than 30 seconds.",
   },
 ];
 
 function Index() {
-  const { type } = Route.useSearch();
+  const { type, edit } = Route.useSearch();
   const initialType = QR_TYPES.some((t) => t.id === type) ? (type as QRTypeId) : "url";
 
   const scrollToGenerator = () => {
@@ -334,8 +336,8 @@ function Index() {
             </Badge>
           </div>
 
-          <div className="rounded-[2rem] border-2 border-primary/20 bg-card/90 p-6 shadow-2xl backdrop-blur-xl sm:p-10">
-            <QRWizard initialType={initialType} />
+          <div className="rounded-2xl sm:rounded-[2rem] border-2 border-primary/20 bg-card/90 p-3.5 sm:p-6 md:p-8 lg:p-10 shadow-2xl backdrop-blur-xl">
+            <QRWizard initialType={initialType} initialEditId={edit} />
           </div>
         </section>
 

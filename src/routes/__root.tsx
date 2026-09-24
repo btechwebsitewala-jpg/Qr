@@ -117,45 +117,6 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){
-              try{
-                var t=localStorage.getItem("bt_theme_preference");
-                if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches)){
-                  document.documentElement.classList.add("dark");
-                }else{
-                  document.documentElement.classList.remove("dark");
-                }
-              }catch(e){}
-
-              function killBadges(){
-                try{
-                  var selectors = ['#lovable-badge', '.lovable-badge', 'lovable-tag', '[id*="lovable"]', '[class*="lovable"]', '[id*="gpteng"]', '[class*="gpteng"]', 'a[href*="lovable.dev"]'];
-                  selectors.forEach(function(s){
-                    document.querySelectorAll(s).forEach(function(el){
-                      if(el && el.parentNode && el.tagName!=='HTML' && el.tagName!=='BODY') el.remove();
-                    });
-                  });
-                  document.querySelectorAll('*').forEach(function(el){
-                    if(el && el.children && el.children.length === 0 && el.textContent && el.textContent.includes('Edit with Lovable')){
-                      var parent = el.closest('div') || el;
-                      if(parent && parent.parentNode && parent.tagName!=='BODY' && parent.tagName!=='HTML') parent.remove();
-                    }
-                  });
-                }catch(e){}
-              }
-
-              if(typeof window !== 'undefined'){
-                killBadges();
-                document.addEventListener('DOMContentLoaded', killBadges);
-                window.addEventListener('load', killBadges);
-                var obs = new MutationObserver(killBadges);
-                if(document.documentElement) obs.observe(document.documentElement, { childList: true, subtree: true });
-              }
-            })();`,
-          }}
-        />
         <HeadContent />
       </head>
       <body>
@@ -168,6 +129,68 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("bt_theme_preference");
+      if (
+        t === "dark" ||
+        (!t && window.matchMedia("(prefers-color-scheme: dark)").matches) ||
+        (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    } catch {
+      // storage unavailable
+    }
+
+    const killBadges = () => {
+      try {
+        const selectors = [
+          "#lovable-badge",
+          ".lovable-badge",
+          "lovable-tag",
+          '[id*="lovable"]',
+          '[class*="lovable"]',
+          '[id*="gpteng"]',
+          '[class*="gpteng"]',
+          'a[href*="lovable.dev"]',
+        ];
+        selectors.forEach((s) => {
+          document.querySelectorAll(s).forEach((el) => {
+            if (el && el.parentNode && el.tagName !== "HTML" && el.tagName !== "BODY") {
+              el.remove();
+            }
+          });
+        });
+        document.querySelectorAll("*").forEach((el) => {
+          if (
+            el &&
+            el.children &&
+            el.children.length === 0 &&
+            el.textContent &&
+            el.textContent.includes("Edit with Lovable")
+          ) {
+            const parent = el.closest("div") || el;
+            if (parent && parent.parentNode && parent.tagName !== "BODY" && parent.tagName !== "HTML") {
+              parent.remove();
+            }
+          }
+        });
+      } catch {
+        // ignore
+      }
+    };
+
+    killBadges();
+    const obs = new MutationObserver(killBadges);
+    if (document.documentElement) {
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+    }
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -8,6 +8,8 @@ interface AuthValue {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  updateUserProfile: (updates: { full_name?: string | undefined; avatar_url?: string | undefined }) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue>({
@@ -15,12 +17,14 @@ const AuthContext = createContext<AuthValue>({
   session: null,
   loading: true,
   signOut: async () => {},
+  updateUserProfile: async () => {},
+  refreshUser: async () => {},
 });
 
 export const DEMO_USER: User = {
   id: "demo-user-123",
   app_metadata: { provider: "email" },
-  user_metadata: { full_name: "Demo Admin", name: "Demo Admin" },
+  user_metadata: { full_name: "Demo User", name: "Demo User" },
   aud: "authenticated",
   created_at: new Date().toISOString(),
   email: "demo@bt-qr.app",
@@ -87,14 +91,22 @@ export function getDemoUser(): User {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [demoUser, setDemoUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
-      if (typeof window !== "undefined" && localStorage.getItem("bt_demo_session") === "true") {
-        setIsDemo(true);
-        setLoading(false);
-        return;
+      if (typeof window !== "undefined") {
+        // If returning from an OAuth callback, clear demo flags to prioritize real OAuth user
+        if (window.location.search.includes("code=") || window.location.hash.includes("access_token=")) {
+          localStorage.removeItem("bt_demo_session");
+          localStorage.removeItem("bt_demo_user");
+        } else if (localStorage.getItem("bt_demo_session") === "true") {
+          setIsDemo(true);
+          setDemoUser(getDemoUser());
+          setLoading(false);
+          return;
+        }
       }
     } catch {
       // Storage unavailable
@@ -102,6 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
+      if (nextSession?.user) {
+        setIsDemo(false);
+      }
       setLoading(false);
     });
 
@@ -109,6 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .getSession()
       .then(({ data: current }) => {
         setSession(current?.session ?? null);
+        if (current?.session?.user) {
+          setIsDemo(false);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -119,9 +137,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  const updateUserProfile = async (updates: { full_name?: string | undefined; avatar_url?: string | undefined }) => {
+    if (isDemo || (typeof window !== "undefined" && localStorage.getItem("bt_demo_session") === "true")) {
+      const current = getDemoUser();
+      const existingMeta = current.user_metadata ?? {};
+      const updatedUser: User = {
+        ...current,
+        user_metadata: {
+          ...existingMeta,
+          ...updates,
+          name: updates.full_name ?? (typeof existingMeta["name"] === "string" ? existingMeta["name"] : undefined),
+          full_name: updates.full_name ?? (typeof existingMeta["full_name"] === "string" ? existingMeta["full_name"] : undefined),
+        },
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("bt_demo_user", JSON.stringify(updatedUser));
+      }
+      setDemoUser(updatedUser);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: updates,
+    });
+    if (error) throw error;
+    if (data.user) {
+      setSession((prev) => (prev ? { ...prev, user: data.user } : prev));
+    }
+  };
+
+  const refreshUser = async () => {
+    if (isDemo || (typeof window !== "undefined" && localStorage.getItem("bt_demo_session") === "true")) {
+      setDemoUser(getDemoUser());
+      return;
+    }
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      setSession((prev) => (prev ? { ...prev, user: data.user } : prev));
+    }
+  };
+
   const value = useMemo<AuthValue>(
     () => ({
-      user: isDemo ? getDemoUser() : (session?.user ?? null),
+      user: isDemo ? (demoUser ?? getDemoUser()) : (session?.user ?? null),
       session,
       loading,
       signOut: async () => {
@@ -129,11 +187,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (typeof window !== "undefined") {
             localStorage.removeItem("bt_demo_session");
             localStorage.removeItem("bt_demo_user");
+            localStorage.removeItem("bt_admin_token");
+            localStorage.removeItem("bt_user_plan");
           }
         } catch {
           // ignore
         }
         setIsDemo(false);
+        setDemoUser(null);
         setSession(null);
         try {
           await supabase.auth.signOut();
@@ -144,8 +205,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           window.location.href = "/auth";
         }
       },
+      updateUserProfile,
+      refreshUser,
     }),
-    [session, loading, isDemo],
+    [session, loading, isDemo, demoUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

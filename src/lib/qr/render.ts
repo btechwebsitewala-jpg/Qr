@@ -529,7 +529,10 @@ function renderDot(x: number, y: number, u: number, style: DotStyle, fill: strin
     }
 
     case "heart": {
-      const d = `M ${cx.toFixed(2)} ${(y + u * 0.82).toFixed(2)} C ${(x + u * 0.1).toFixed(2)} ${(y + u * 0.5).toFixed(2)}, ${x.toFixed(2)} ${(y + u * 0.18).toFixed(2)}, ${(cx - u * 0.25).toFixed(2)} ${(y + u * 0.15).toFixed(2)} C ${(cx - u * 0.05).toFixed(2)} ${(y + u * 0.15).toFixed(2)} C ${(cx).toFixed(2)} ${(y + u * 0.32).toFixed(2)}, ${(cx).toFixed(2)} ${(y + u * 0.32).toFixed(2)} C ${(cx).toFixed(2)} ${(y + u * 0.32).toFixed(2)}, ${(cx + u * 0.05).toFixed(2)} ${(y + u * 0.15).toFixed(2)}, ${(cx + u * 0.25).toFixed(2)} ${(y + u * 0.15).toFixed(2)} C ${(x + u).toFixed(2)} ${(y + u * 0.18).toFixed(2)}, ${(x + u * 0.9).toFixed(2)} ${(y + u * 0.5).toFixed(2)}, ${cx.toFixed(2)} ${(y + u * 0.82).toFixed(2)} Z`;
+      const topY = (y + u * 0.2).toFixed(2);
+      const botY = (y + u * 0.85).toFixed(2);
+      const midY = (y + u * 0.45).toFixed(2);
+      const d = `M ${cx.toFixed(2)} ${botY} C ${x.toFixed(2)} ${midY} ${x.toFixed(2)} ${topY} ${(cx - u * 0.25).toFixed(2)} ${topY} C ${(cx - u * 0.05).toFixed(2)} ${topY} ${cx.toFixed(2)} ${(y + u * 0.32).toFixed(2)} ${cx.toFixed(2)} ${(y + u * 0.38).toFixed(2)} C ${cx.toFixed(2)} ${(y + u * 0.32).toFixed(2)} ${(cx + u * 0.05).toFixed(2)} ${topY} ${(cx + u * 0.25).toFixed(2)} ${topY} C ${(x + u).toFixed(2)} ${topY} ${(x + u).toFixed(2)} ${midY} ${cx.toFixed(2)} ${botY} Z`;
       return `<path d="${d}" fill="${fill}"/>`;
     }
 

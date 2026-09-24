@@ -39,11 +39,12 @@ export const Route = createFileRoute("/r/$code")({
         let scanCount = 0;
 
         // 1. Instant check in server-side dynamic registry (handles live destination changes)
+        let localRecord: import("@/lib/qr/dynamic-registry.server").DynamicRouteRecord | null = null;
         try {
           const { getDynamicRoute, recordDynamicScan } = await import(
             "@/lib/qr/dynamic-registry.server"
           );
-          const localRecord = getDynamicRoute(code);
+          localRecord = getDynamicRoute(code);
           if (localRecord?.target_url) {
             target = localRecord.target_url;
             scanCount = recordDynamicScan(code, {
@@ -58,31 +59,51 @@ export const Route = createFileRoute("/r/$code")({
           // ignore
         }
 
-        // 2. Also check Supabase database if available with a fast timeout
-        if (!target) {
-          try {
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200));
-            const query = supabaseAdmin
-              .from("qr_codes")
-              .select("id, target_url, encoded_value, scan_count")
-              .eq("short_code", code)
-              .maybeSingle();
+        // 2. Also check Supabase database with a fast timeout (and verify if database has a newer update)
+        try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 800));
+          const query = supabaseAdmin
+            .from("qr_codes")
+            .select("id, target_url, encoded_value, scan_count, updated_at")
+            .eq("short_code", code)
+            .maybeSingle();
 
-            const res = await Promise.race([query, timeout]);
-            if (res && "data" in res && res.data) {
-              const qr = res.data;
-              qrId = qr.id;
-              target = qr.target_url ?? qr.encoded_value;
-              scanCount = (qr.scan_count ?? 0) + 1;
-              void supabaseAdmin
-                .from("qr_codes")
-                .update({ scan_count: scanCount })
-                .eq("id", qr.id);
+          const res = await Promise.race([query, timeout]);
+          if (res && "data" in res && res.data) {
+            const qr = res.data;
+            qrId = qr.id;
+            const dbTarget = qr.target_url ?? qr.encoded_value;
+            const dbTime = qr.updated_at ? new Date(qr.updated_at).getTime() : 0;
+            const localTime = localRecord?.updated_at ? new Date(localRecord.updated_at).getTime() : 0;
+
+            if (dbTarget && (!target || dbTime > localTime)) {
+              target = dbTarget;
+              try {
+                const { setDynamicRoute } = await import("@/lib/qr/dynamic-registry.server");
+                setDynamicRoute({
+                  short_code: code,
+                  target_url: dbTarget,
+                  scan_count: (qr.scan_count ?? 0) + 1,
+                });
+              } catch {
+                // ignore
+              }
             }
-          } catch {
-            // ignore network/paused database errors
+
+            scanCount = (qr.scan_count ?? 0) + 1;
+            void supabaseAdmin
+              .from("qr_codes")
+              .update({ scan_count: scanCount })
+              .eq("id", qr.id);
           }
+        } catch {
+          // ignore network/paused database errors
+        }
+
+        // Ensure target protocol is valid
+        if (target && !/^https?:\/\//i.test(target)) {
+          target = `https://${target}`;
         }
 
         // Social crawlers get a preview page with the "Scan me" OG card
@@ -165,40 +186,53 @@ export const Route = createFileRoute("/r/$code")({
 
 function ClientDynamicRedirect() {
   const { code } = Route.useParams();
+  const cleanCode = (code ?? "").toLowerCase().trim();
   const [status, setStatus] = useState<"redirecting" | "not_found">("redirecting");
 
   useEffect(() => {
-    // 1. Check local storage
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith("bt_user_qr_codes") || key === "bt_demo_qr_codes")) {
-          const list = JSON.parse(localStorage.getItem(key) || "[]");
-          const found = list.find((q: { short_code?: string; target_url?: string; encoded_value?: string }) => q.short_code === code);
-          if (found && (found.target_url || found.encoded_value)) {
-            window.location.replace(found.target_url || found.encoded_value);
-            return;
+    let active = true;
+
+    function checkLocalFallback() {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("bt_user_qr_codes") || key === "bt_demo_qr_codes")) {
+            const list = JSON.parse(localStorage.getItem(key) || "[]");
+            const found = list.find((q: { short_code?: string; target_url?: string; encoded_value?: string }) => q.short_code?.toLowerCase() === cleanCode);
+            if (found && (found.target_url || found.encoded_value)) {
+              let url = (found.target_url || found.encoded_value).trim();
+              if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+              window.location.replace(url);
+              return;
+            }
           }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
+      if (active) setStatus("not_found");
     }
 
-    // 2. Query dynamic routes API
-    void fetch(`/api/dynamic-routes?code=${encodeURIComponent(code)}`)
+    // 1. Query server dynamic routes API first for real-time destination
+    fetch(`/api/dynamic-routes?code=${encodeURIComponent(cleanCode)}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.target_url) {
-          window.location.replace(data.target_url);
+          let url = String(data.target_url).trim();
+          if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+          window.location.replace(url);
         } else {
-          setStatus("not_found");
+          checkLocalFallback();
         }
       })
       .catch(() => {
-        setStatus("not_found");
+        checkLocalFallback();
       });
-  }, [code]);
+
+    return () => {
+      active = false;
+    };
+  }, [cleanCode]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-gradient px-4 py-12 text-center">

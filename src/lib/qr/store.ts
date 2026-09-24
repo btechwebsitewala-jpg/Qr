@@ -38,6 +38,7 @@ export interface SaveQrInput {
   encodedValue: string;
   style: QRStyle;
   isDynamic: boolean;
+  shortCode?: string;
 }
 
 export function isDemoMode(): boolean {
@@ -90,7 +91,7 @@ export function getUserQrCodes(userId = getActiveUserId()): QrCodeRow[] {
         name: "BTech Websitewala Official (Dynamic)",
         qr_type: "url",
         content: { url: "https://btechwebsitewala.com" },
-        encoded_value: "https://btechwebsitewala.com",
+        encoded_value: shortUrl("btweb"),
         style: DEFAULT_STYLE,
         short_code: "btweb",
         is_dynamic: true,
@@ -120,11 +121,11 @@ export function getUserQrCodes(userId = getActiveUserId()): QrCodeRow[] {
         name: "Product Portfolio Catalog",
         qr_type: "pdf",
         content: { url: "https://example.com/portfolio.pdf" },
-        encoded_value: "https://example.com/portfolio.pdf",
+        encoded_value: shortUrl("doc33"),
         style: { ...DEFAULT_STYLE, fg: "#d97706" },
         short_code: "doc33",
-        is_dynamic: false,
-        target_url: null,
+        is_dynamic: true,
+        target_url: "https://example.com/portfolio.pdf",
         scan_count: 412,
         created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
         updated_at: new Date().toISOString(),
@@ -153,32 +154,39 @@ export async function syncDynamicRouteToServer(record: {
   target_url: string;
   name?: string;
   scan_count?: number;
-}): Promise<void> {
+}): Promise<boolean> {
+  if (!record.short_code || !record.target_url) return false;
   try {
     if (typeof window !== "undefined") {
-      await fetch("/api/dynamic-routes", {
+      const res = await fetch("/api/dynamic-routes", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(record),
       });
+      return res.ok;
     }
-  } catch {
-    // ignore network errors
+  } catch (err) {
+    console.warn("Failed to sync dynamic route to server:", err);
   }
+  return false;
 }
 
 export async function saveQrCode(input: SaveQrInput): Promise<QrCodeRow> {
-  const shortCode = makeShortCode();
+  const shortCode = (input.shortCode && input.shortCode.trim()) || makeShortCode();
   const dynamic = input.isDynamic && /^https?:\/\//i.test(input.encodedValue);
   const activeUserId = getActiveUserId();
 
   if (dynamic) {
-    void syncDynamicRouteToServer({
-      short_code: shortCode,
-      target_url: input.encodedValue,
-      name: input.name,
-      scan_count: 0,
-    });
+    try {
+      await syncDynamicRouteToServer({
+        short_code: shortCode,
+        target_url: input.encodedValue,
+        name: input.name,
+        scan_count: 0,
+      });
+    } catch {
+      // ignore
+    }
   }
 
   if (isDemoMode()) {
@@ -223,7 +231,10 @@ export async function saveQrCode(input: SaveQrInput): Promise<QrCodeRow> {
       .single();
 
     if (error) throw error;
-    return data as unknown as QrCodeRow;
+    const inserted = data as unknown as QrCodeRow;
+    const list = getUserQrCodes(activeUserId);
+    saveUserQrCodes([inserted, ...list], activeUserId);
+    return inserted;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     if (/fetch|network|failed/i.test(msg) || !sessionData.session) {
@@ -291,7 +302,12 @@ export async function listQrCodes(): Promise<QrCodeRow[]> {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (data ?? []) as unknown as QrCodeRow[];
+    const codes = (data ?? []) as unknown as QrCodeRow[];
+    if (codes.length > 0) {
+      saveUserQrCodes(codes, activeUserId);
+      return codes;
+    }
+    return list;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     if (/fetch|network|failed/i.test(msg)) {
@@ -304,7 +320,87 @@ export async function listQrCodes(): Promise<QrCodeRow[]> {
 export async function getQrCode(id: string): Promise<QrCodeRow> {
   const activeUserId = getActiveUserId();
   const list = getUserQrCodes(activeUserId);
-  const found = list.find((q) => q.id === id);
+  const cleanId = id.trim().toLowerCase();
+
+  let found: QrCodeRow | undefined = list.find(
+    (q) => q.id.toLowerCase() === cleanId || q.short_code?.toLowerCase() === cleanId,
+  );
+
+  // Search across all other local storage namespaces
+  if (!found && typeof window !== "undefined") {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("bt_user_qr_codes") || k === "bt_demo_qr_codes")) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const match = parsed.find(
+                (item) => item?.id?.toLowerCase() === cleanId || item?.short_code?.toLowerCase() === cleanId,
+              );
+              if (match) {
+                found = match;
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // If not found in localStorage, fetch from Supabase
+  if (!found && !isDemoMode()) {
+    try {
+      const { data } = await supabase
+        .from("qr_codes")
+        .select("*")
+        .or(`id.eq.${id},short_code.eq.${id}`)
+        .maybeSingle();
+      if (data) {
+        found = data as unknown as QrCodeRow;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // If still not found, check dynamic-routes API by short_code
+  if (!found && typeof window !== "undefined") {
+    try {
+      const res = await fetch(`/api/dynamic-routes?code=${encodeURIComponent(id)}`);
+      if (res.ok) {
+        const dynamicRecord = (await res.json()) as {
+          short_code: string;
+          target_url: string;
+          name?: string;
+          scan_count?: number;
+        } | null;
+        if (dynamicRecord && dynamicRecord.short_code) {
+          found = {
+            id: `qr-${dynamicRecord.short_code}`,
+            user_id: activeUserId,
+            name: dynamicRecord.name || `Dynamic QR (${dynamicRecord.short_code})`,
+            qr_type: "url",
+            content: { url: dynamicRecord.target_url },
+            encoded_value: shortUrl(dynamicRecord.short_code),
+            style: DEFAULT_STYLE,
+            short_code: dynamicRecord.short_code,
+            is_dynamic: true,
+            target_url: dynamicRecord.target_url,
+            scan_count: dynamicRecord.scan_count || 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   if (found) {
     // Sync latest real-time scan count and destination from server
@@ -351,9 +447,6 @@ export async function getQrCode(id: string): Promise<QrCodeRow> {
     if (error) throw new Error(error.message);
     return data as unknown as QrCodeRow;
   } catch (err) {
-    const list = getUserQrCodes(activeUserId);
-    const found = list.find((q) => q.id === id);
-    if (found) return found;
     if (list[0]) return list[0];
     throw err;
   }
@@ -361,101 +454,178 @@ export async function getQrCode(id: string): Promise<QrCodeRow> {
 
 export async function updateQrCode(
   id: string,
-  patch: Partial<Pick<QrCodeRow, "name" | "target_url" | "encoded_value" | "content" | "style" | "is_dynamic">>,
-): Promise<void> {
+  patch: Partial<
+    Pick<
+      QrCodeRow,
+      "name" | "target_url" | "encoded_value" | "content" | "style" | "is_dynamic" | "short_code"
+    >
+  >,
+): Promise<QrCodeRow> {
   const activeUserId = getActiveUserId();
 
-  const syncCodeRecord = (code: QrCodeRow) => {
-    if ((code.is_dynamic || patch.is_dynamic) && (patch.target_url || code.target_url)) {
-      void syncDynamicRouteToServer({
-        short_code: code.short_code,
-        target_url: patch.target_url || code.target_url || code.encoded_value,
-        name: patch.name || code.name,
-        scan_count: code.scan_count,
-      });
+  // 1. Locate the existing record across local storage and Supabase
+  let existing: QrCodeRow | undefined;
+  const activeList = getUserQrCodes(activeUserId);
+  existing = activeList.find((q) => q.id === id);
+
+  if (!existing && typeof window !== "undefined") {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("bt_user_qr_codes") || k === "bt_demo_qr_codes")) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const match = parsed.find((item) => item?.id === id);
+              if (match) {
+                existing = match;
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
     }
+  }
+
+  if (!existing && !isDemoMode()) {
+    try {
+      const { data } = await supabase.from("qr_codes").select("*").eq("id", id).maybeSingle();
+      if (data) {
+        existing = data as unknown as QrCodeRow;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const isDynamic = patch.is_dynamic !== undefined ? patch.is_dynamic : (existing?.is_dynamic ?? false);
+  const shortCode = (patch.short_code || existing?.short_code || (isDynamic ? makeShortCode(7) : "")).trim();
+
+  let cleanTarget = (patch.target_url !== undefined && patch.target_url !== null) ? patch.target_url.trim() : (existing?.target_url?.trim() || null);
+  if (cleanTarget && !/^https?:\/\//i.test(cleanTarget) && (isDynamic || existing?.qr_type === "url")) {
+    cleanTarget = `https://${cleanTarget}`;
+  }
+
+  const newEncodedValue = isDynamic
+    ? (shortCode ? shortUrl(shortCode) : (existing?.encoded_value || ""))
+    : (patch.encoded_value ?? existing?.encoded_value ?? cleanTarget ?? "");
+
+  const updatedRecord: QrCodeRow = {
+    id,
+    user_id: existing?.user_id || activeUserId,
+    name: (patch.name !== undefined ? patch.name.trim() : existing?.name) || "Untitled QR",
+    qr_type: existing?.qr_type || "url",
+    content: patch.content || existing?.content || (cleanTarget ? { url: cleanTarget } : {}),
+    encoded_value: newEncodedValue,
+    style: patch.style || existing?.style || DEFAULT_STYLE,
+    short_code: shortCode,
+    is_dynamic: isDynamic,
+    target_url: isDynamic ? cleanTarget : null,
+    scan_count: existing?.scan_count ?? 0,
+    created_at: existing?.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
-  if (isDemoMode()) {
-    const list = getUserQrCodes(activeUserId).map((code) => {
-      if (code.id === id) {
-        const isDyn = patch.is_dynamic !== undefined ? patch.is_dynamic : code.is_dynamic;
-        const targetUrl = patch.target_url !== undefined ? patch.target_url : code.target_url;
-        const updated: QrCodeRow = {
-          ...code,
-          ...patch,
-          is_dynamic: isDyn,
-          target_url: targetUrl,
-          encoded_value: isDyn ? shortUrl(code.short_code) : (patch.encoded_value ?? code.encoded_value),
-          updated_at: new Date().toISOString(),
-        };
-        syncCodeRecord(updated);
-        return updated;
-      }
-      return code;
-    });
-    saveUserQrCodes(list, activeUserId);
-    return;
-  }
-
-  try {
-    const { error } = await supabase
-      .from("qr_codes")
-      .update({ ...patch, updated_at: new Date().toISOString() } as never)
-      .eq("id", id);
-    if (error) throw new Error(error.message);
-
-    const list = getUserQrCodes(activeUserId);
-    const found = list.find((q) => q.id === id);
-    if (found) {
-      syncCodeRecord({ ...found, ...patch });
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "";
-    if (/fetch|network|failed/i.test(msg)) {
-      const list = getUserQrCodes(activeUserId).map((code) => {
-        if (code.id === id) {
-          const isDyn = patch.is_dynamic !== undefined ? patch.is_dynamic : code.is_dynamic;
-          const targetUrl = patch.target_url !== undefined ? patch.target_url : code.target_url;
-          const updated: QrCodeRow = {
-            ...code,
-            ...patch,
-            is_dynamic: isDyn,
-            target_url: targetUrl,
-            encoded_value: isDyn ? shortUrl(code.short_code) : (patch.encoded_value ?? code.encoded_value),
-            updated_at: new Date().toISOString(),
-          };
-          syncCodeRecord(updated);
-          return updated;
-        }
-        return code;
+  // 2. CRITICAL: Synchronize destination with server dynamic registry immediately & await it!
+  if (isDynamic && shortCode && cleanTarget) {
+    try {
+      await syncDynamicRouteToServer({
+        short_code: shortCode,
+        target_url: cleanTarget,
+        name: updatedRecord.name,
+        scan_count: updatedRecord.scan_count,
       });
-      saveUserQrCodes(list, activeUserId);
-      return;
+    } catch (err) {
+      console.warn("Could not sync dynamic route to server:", err);
     }
-    throw err;
   }
+
+  // 3. Update Supabase if not in pure demo mode
+  if (!isDemoMode()) {
+    try {
+      await supabase
+        .from("qr_codes")
+        .update({
+          name: updatedRecord.name,
+          target_url: updatedRecord.target_url,
+          encoded_value: updatedRecord.encoded_value,
+          content: updatedRecord.content as never,
+          style: updatedRecord.style as never,
+          is_dynamic: updatedRecord.is_dynamic,
+          short_code: updatedRecord.short_code,
+          updated_at: updatedRecord.updated_at,
+        } as never)
+        .eq("id", id);
+    } catch (err) {
+      console.warn("Supabase update error (falling back to local):", err);
+    }
+  }
+
+  // 4. Update Local Storage across all user keys & active list
+  const nextActiveList = activeList.some((q) => q.id === id)
+    ? activeList.map((q) => (q.id === id ? updatedRecord : q))
+    : [updatedRecord, ...activeList];
+  saveUserQrCodes(nextActiveList, activeUserId);
+
+  if (typeof window !== "undefined") {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k !== getUserQrStorageKey(activeUserId) && (k.startsWith("bt_user_qr_codes") || k === "bt_demo_qr_codes")) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.some((item) => item?.id === id)) {
+              const patched = parsed.map((item) => (item?.id === id ? updatedRecord : item));
+              localStorage.setItem(k, JSON.stringify(patched));
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return updatedRecord;
 }
 
 export async function deleteQrCode(id: string): Promise<void> {
   const activeUserId = getActiveUserId();
-  if (isDemoMode()) {
-    const list = getUserQrCodes(activeUserId).filter((code) => code.id !== id);
-    saveUserQrCodes(list, activeUserId);
-    return;
+
+  if (!isDemoMode()) {
+    try {
+      await supabase.from("qr_codes").delete().eq("id", id);
+    } catch {
+      // ignore
+    }
   }
 
-  try {
-    const { error } = await supabase.from("qr_codes").delete().eq("id", id);
-    if (error) throw new Error(error.message);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "";
-    if (/fetch|network|failed/i.test(msg)) {
-      const list = getUserQrCodes(activeUserId).filter((code) => code.id !== id);
-      saveUserQrCodes(list, activeUserId);
-      return;
+  const list = getUserQrCodes(activeUserId).filter((code) => code.id !== id);
+  saveUserQrCodes(list, activeUserId);
+
+  if (typeof window !== "undefined") {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k !== getUserQrStorageKey(activeUserId) && (k.startsWith("bt_user_qr_codes") || k === "bt_demo_qr_codes")) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const filtered = parsed.filter((item) => item?.id !== id);
+              localStorage.setItem(k, JSON.stringify(filtered));
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
     }
-    throw err;
   }
 }
 
@@ -507,10 +677,18 @@ function getDemoScans(qrId: string): ScanRow[] {
 }
 
 export async function listScans(qrId: string): Promise<ScanRow[]> {
-  const activeUserId = getActiveUserId();
-  const list = getUserQrCodes(activeUserId);
-  const found = list.find((q) => q.id === qrId);
-  const shortCode = found?.short_code;
+  // Resolve short_code via getQrCode or directly
+  let shortCode: string | undefined = undefined;
+  try {
+    const found = await getQrCode(qrId);
+    shortCode = found?.short_code;
+  } catch {
+    // fallback
+  }
+
+  if (!shortCode && qrId.length < 24) {
+    shortCode = qrId;
+  }
 
   // 1. Fetch real recorded scans from server
   if (shortCode && typeof window !== "undefined") {
@@ -556,7 +734,26 @@ export async function simulateScan(shortCode: string): Promise<number> {
     });
     if (res.ok) {
       const data = (await res.json()) as { scan_count?: number } | null;
-      return data?.scan_count ?? 1;
+      const count = data?.scan_count ?? 1;
+
+      // Sync updated scan_count back into local storage for this QR code
+      if (typeof window !== "undefined") {
+        const activeUserId = getActiveUserId();
+        const list = getUserQrCodes(activeUserId);
+        let changed = false;
+        const updated = list.map((q) => {
+          if (q.short_code?.toLowerCase() === shortCode.toLowerCase()) {
+            changed = true;
+            return { ...q, scan_count: count };
+          }
+          return q;
+        });
+        if (changed) {
+          saveUserQrCodes(updated, activeUserId);
+        }
+      }
+
+      return count;
     }
   } catch {
     // ignore

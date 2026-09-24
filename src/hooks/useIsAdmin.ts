@@ -16,34 +16,16 @@ export function useIsAdmin() {
       setLoading(false);
       return;
     }
-    if (user.email === "demo@bt-qr.app") {
+    const cleanEmail = user.email?.toLowerCase().trim();
+    if (cleanEmail === "rahulkushwaha1842003@gmail.com") {
       setIsAdmin(true);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    const checkAdmin = async () => {
-      try {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .maybeSingle();
 
-        if (!active) return;
-        setIsAdmin(Boolean(data));
-      } catch {
-        if (!active) return;
-        setIsAdmin(false);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    checkAdmin();
-    return () => {
-      active = false;
-    };
+    // No other user has admin privileges
+    setIsAdmin(false);
+    setLoading(false);
   }, [user]);
 
   return { isAdmin, loading };

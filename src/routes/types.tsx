@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ChevronDown, Search, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Lock, LogIn, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 import { QR_TYPES } from "@/lib/qr/config";
 
 const TITLE = "All Types of QR Codes — BT-QR";
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/types")({
 const INITIAL = 12;
 
 function TypesPage() {
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
 
@@ -88,6 +90,31 @@ function TypesPage() {
             ) : null}
           </div>
         </div>
+
+        {!user ? (
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 shadow-xs">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+                <Lock className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">
+                  Sign in required to generate &amp; download QR codes
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Choose any QR type below to configure its content. Free login is required to generate the code and download HD files.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button asChild size="sm" className="bg-brand-gradient text-primary-foreground font-bold h-9 rounded-xl px-4 shadow-sm hover:opacity-95">
+                <Link to="/auth">
+                  <LogIn className="mr-1.5 size-4" /> Log In / Sign Up
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((type) => {

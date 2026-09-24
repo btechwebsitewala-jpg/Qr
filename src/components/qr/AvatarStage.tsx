@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import {
   Check,
@@ -6,6 +7,8 @@ import {
   FileText,
   ImagePlus,
   Loader2,
+  Lock,
+  LogIn,
   Palette,
   Sparkles,
   Type,
@@ -24,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { DEFAULT_STYLE, type QRStyle } from "@/lib/qr/render";
 import {
@@ -87,6 +91,7 @@ export function AvatarStage({
   initialTitle = "SCAN TO PAY",
   initialSubtitle = "Instant UPI • Google Pay • PhonePe",
 }: AvatarStageProps) {
+  const { user } = useAuth();
   const { plan, isPaid, isPremium, setSimulatedPlan } = useUserPlan();
 
   const [active, setActive] = useState<AvatarId>("male");
@@ -106,6 +111,12 @@ export function AvatarStage({
   const defaultAvatar = AVATARS.find((a) => a.id === active) ?? AVATARS[0]!;
 
   const handleCustomUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) {
+      toast.error("Authentication required", {
+        description: "Please log in to upload custom characters or mascots.",
+      });
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -130,6 +141,12 @@ export function AvatarStage({
   };
 
   const executeDownload = async (isWatermarked = false) => {
+    if (!user) {
+      toast.error("Authentication required", {
+        description: "Please log in to download standees.",
+      });
+      return;
+    }
     setDownloading(true);
     try {
       const characterSrc =
@@ -165,6 +182,12 @@ export function AvatarStage({
   };
 
   const handleDownloadClick = () => {
+    if (!user) {
+      toast.error("Authentication required", {
+        description: "Please log in to generate and download standees.",
+      });
+      return;
+    }
     // If user is on a paid plan (Lite or Premium) or demo, allow direct download
     if (isPaid) {
       void executeDownload(false);
@@ -190,6 +213,20 @@ export function AvatarStage({
         aria-hidden
         className="pointer-events-none absolute -bottom-20 -left-20 size-72 rounded-full bg-chart-2/10 blur-3xl"
       />
+
+      {!user ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-3.5 sm:p-4 text-xs shadow-xs">
+          <div className="flex items-center gap-2.5 text-foreground font-semibold">
+            <Lock className="size-4.5 text-primary shrink-0" />
+            <span>Login required to generate and download printable 3D standees &amp; posters.</span>
+          </div>
+          <Button asChild size="sm" className="h-8 rounded-xl bg-brand-gradient text-xs font-bold text-primary-foreground shadow-xs shrink-0">
+            <Link to="/auth">
+              <LogIn className="mr-1.5 size-3.5" /> Log In
+            </Link>
+          </Button>
+        </div>
+      ) : null}
 
       {/* Header bar with Plan status and simulator switch */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/70 pb-3.5 sm:pb-4">
@@ -543,45 +580,61 @@ export function AvatarStage({
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-1">
-              <Button
-                size="lg"
-                className="w-full sm:flex-1 h-11 sm:h-12 rounded-xl bg-brand-gradient text-xs sm:text-sm font-bold text-primary-foreground shadow-brand cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform"
-                disabled={downloading}
-                onClick={handleDownloadClick}
-              >
-                {downloading ? (
-                  <Loader2 className="mr-2 size-4 animate-spin shrink-0" />
-                ) : (
-                  <Download className="mr-2 size-4 shrink-0" />
-                )}
-                <span className="truncate">
-                  {isPaid
-                    ? `Download Standee (${exportFormat.toUpperCase()})`
-                    : `Download Standee (${exportFormat.toUpperCase()}) - Paid`}
-                </span>
-              </Button>
-
-              {!isPaid ? (
+            {!user ? (
+              <div className="pt-1">
                 <Button
-                  type="button"
-                  variant="outline"
+                  asChild
                   size="lg"
-                  className="w-full sm:w-auto h-11 sm:h-12 rounded-xl border-border/80 text-xs font-semibold cursor-pointer hover:bg-secondary shrink-0"
-                  disabled={downloading}
-                  onClick={() => void executeDownload(true)}
-                  title="Download a free preview poster with a small watermark"
+                  className="w-full h-11 sm:h-12 rounded-xl bg-brand-gradient text-xs sm:text-sm font-bold text-primary-foreground shadow-brand cursor-pointer"
                 >
-                  <Sparkles className="mr-1.5 size-3.5 text-primary shrink-0" />
-                  Free Demo Download
+                  <Link to="/auth">
+                    <Lock className="mr-2 size-4 shrink-0" /> Log in to Generate &amp; Download Standee
+                  </Link>
                 </Button>
-              ) : null}
-            </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-1">
+                <Button
+                  size="lg"
+                  className="w-full sm:flex-1 h-11 sm:h-12 rounded-xl bg-brand-gradient text-xs sm:text-sm font-bold text-primary-foreground shadow-brand cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform"
+                  disabled={downloading}
+                  onClick={handleDownloadClick}
+                >
+                  {downloading ? (
+                    <Loader2 className="mr-2 size-4 animate-spin shrink-0" />
+                  ) : (
+                    <Download className="mr-2 size-4 shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {isPaid
+                      ? `Download Standee (${exportFormat.toUpperCase()})`
+                      : `Download Standee (${exportFormat.toUpperCase()}) - Paid`}
+                  </span>
+                </Button>
+
+                {!isPaid ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto h-11 sm:h-12 rounded-xl border-border/80 text-xs font-semibold cursor-pointer hover:bg-secondary shrink-0"
+                    disabled={downloading}
+                    onClick={() => void executeDownload(true)}
+                    title="Download a free preview poster with a small watermark"
+                  >
+                    <Sparkles className="mr-1.5 size-3.5 text-primary shrink-0" />
+                    Free Demo Download
+                  </Button>
+                ) : null}
+              </div>
+            )}
 
             <p className="text-[11px] text-muted-foreground text-center">
-              {isPaid
-                ? "✓ Watermark-free commercial high-res export included in your paid plan."
-                : "Included in Lite & Premium plans. Click above to export or test free demo."}
+              {!user
+                ? "Sign in or create a free account to customize and export standees."
+                : isPaid
+                  ? "✓ Watermark-free commercial high-res export included in your paid plan."
+                  : "Included in Lite & Premium plans. Click above to export or test free demo."}
             </p>
           </div>
         </div>

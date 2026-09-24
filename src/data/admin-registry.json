@@ -1,0 +1,110 @@
+{
+  "users": [
+    {
+      "id": "admin_rahul_master",
+      "email": "rahulkushwaha1842003@gmail.com",
+      "displayName": "Rahul Kushwaha (Master Admin)",
+      "plan": "premium",
+      "isBlocked": false,
+      "notes": "Primary System Administrator with full control & permissions.",
+      "isAdmin": true,
+      "qrCount": 5,
+      "totalScans": 842,
+      "createdAt": "2026-08-23T12:00:00.000Z",
+      "lastSignInAt": "2026-09-24T23:55:00.000Z",
+      "emailConfirmed": true
+    },
+    {
+      "id": "demo_user_sample",
+      "email": "demo@bt-qr.app",
+      "displayName": "Demo User",
+      "plan": "free",
+      "isBlocked": false,
+      "notes": "Standard test account.",
+      "isAdmin": true,
+      "qrCount": 2,
+      "totalScans": 18,
+      "createdAt": "2026-08-24T10:00:00.000Z",
+      "lastSignInAt": "2026-09-20T15:30:00.000Z",
+      "emailConfirmed": true
+    },
+    {
+      "id": "user_rahul_corp",
+      "email": "rahul@gmail.com",
+      "displayName": "Rahul (Business Client)",
+      "plan": "lite",
+      "isBlocked": false,
+      "notes": "Corporate demo account for quick sign-in.",
+      "isAdmin": false,
+      "qrCount": 3,
+      "totalScans": 64,
+      "createdAt": "2026-09-01T08:15:00.000Z",
+      "lastSignInAt": "2026-09-24T20:10:00.000Z",
+      "emailConfirmed": true
+    }
+  ],
+  "qrCodes": [
+    {
+      "id": "qr_master_portal",
+      "userId": "admin_rahul_master",
+      "name": "BT-QR Official Portal",
+      "qrType": "url",
+      "shortCode": "bt-portal",
+      "scanCount": 512,
+      "isDynamic": true,
+      "targetUrl": "https://bt-qr.app",
+      "createdAt": "2026-08-25T14:20:00.000Z",
+      "ownerEmail": "rahulkushwaha1842003@gmail.com"
+    },
+    {
+      "id": "qr_master_wifi",
+      "userId": "admin_rahul_master",
+      "name": "Guest WiFi - Head Office",
+      "qrType": "wifi",
+      "shortCode": "wifi-office",
+      "scanCount": 230,
+      "isDynamic": false,
+      "targetUrl": "WIFI:S:Guest_HQ;T:WPA;P:Welcome2026;;",
+      "createdAt": "2026-08-26T09:10:00.000Z",
+      "ownerEmail": "rahulkushwaha1842003@gmail.com"
+    },
+    {
+      "id": "qr_master_vcard",
+      "userId": "admin_rahul_master",
+      "name": "Rahul Kushwaha Digital Business Card",
+      "qrType": "vcard",
+      "shortCode": "rahul-card",
+      "scanCount": 100,
+      "isDynamic": true,
+      "targetUrl": "https://bt-qr.app/profile",
+      "createdAt": "2026-09-02T11:00:00.000Z",
+      "ownerEmail": "rahulkushwaha1842003@gmail.com"
+    },
+    {
+      "id": "qr_demo_menu",
+      "userId": "demo_user_sample",
+      "name": "Cafe Delicious Digital Menu",
+      "qrType": "pdf",
+      "shortCode": "cafe-menu",
+      "scanCount": 18,
+      "isDynamic": true,
+      "targetUrl": "https://example.com/menu.pdf",
+      "createdAt": "2026-09-10T16:45:00.000Z",
+      "ownerEmail": "demo@bt-qr.app"
+    }
+  ],
+  "settings": {
+    "siteName": "BT-QR Code Generator",
+    "siteDescription": "Save custom QR codes, host files, and track every scan in real-time.",
+    "supportEmail": "rahulkushwaha1842003@gmail.com",
+    "announcementBanner": "Welcome to BT-QR! Generate high-resolution, custom QR codes for free.",
+    "announcementActive": true,
+    "maintenanceMode": false,
+    "defaultPlan": "free",
+    "freeTierLimit": 10,
+    "liteTierLimit": 50,
+    "premiumTierLimit": 500,
+    "allowRegistrations": true,
+    "enableDynamicRedirect": true
+  }
+}

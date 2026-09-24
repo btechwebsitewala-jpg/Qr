@@ -4,7 +4,6 @@ import {
   ChevronDown,
   Columns3,
   CreditCard,
-  Globe,
   Headphones,
   LayoutDashboard,
   LogIn,
@@ -16,12 +15,15 @@ import {
   ScanLine,
   ShieldCheck,
   X,
-  Check,
+  User,
+  Sparkles,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import logoAsset from "@/assets/bt-qr-logo.png";
 import { ThemeToggle } from "@/components/site/ThemeToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -32,11 +34,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useUserPlan } from "@/hooks/useUserPlan";
 
 const ABOUT_ITEMS = [
   { to: "/types", label: "QR Code Types", hint: "17+ formats ready to generate" },
@@ -53,49 +58,35 @@ const INDUSTRY_ITEMS = [
   { to: "/types" as const, search: { type: "vcard" }, label: "Healthcare & Clinics", badge: "Contact" },
 ] as const;
 
-const LANGUAGES = [
-  { code: "en", name: "English", label: "English" },
-  { code: "hi", name: "हिन्दी", label: "Hindi" },
-] as const;
-
 export function SiteHeader() {
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { plan } = useUserPlan();
   const [open, setOpen] = useState(false);
+
+  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
+  const userName =
+    (typeof metadata?.["full_name"] === "string" && metadata["full_name"]) ||
+    (typeof metadata?.["name"] === "string" && metadata["name"]) ||
+    user?.email?.split("@")[0] ||
+    "User";
+  const userAvatar = typeof metadata?.["avatar_url"] === "string" ? metadata["avatar_url"] : "";
+  const userInitials = (userName || "U")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   // Mobile accordion state
   const [aboutOpen, setAboutOpen] = useState(false);
   const [industriesOpen, setIndustriesOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-
-  // Language state
-  const [selectedLang, setSelectedLang] = useState<string>("en");
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("bt_language");
-      if (stored) setSelectedLang(stored);
-    } catch {
-      // Storage unavailable
-    }
-  }, []);
-
-  const handleSelectLang = (code: string) => {
-    setSelectedLang(code);
-    try {
-      localStorage.setItem("bt_language", code);
-    } catch {
-      // Storage unavailable
-    }
-  };
-
-  const currentLangLabel = LANGUAGES.find((l) => l.code === selectedLang)?.name ?? "English";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b-2 border-primary/20 bg-background/95 backdrop-blur-xl shadow-lg">
       <div className="flex h-20 w-full items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
         {/* Left Area: 3-line Menu Button + Logo */}
-        <div className="flex items-center gap-2 sm:gap-3 pl-4 sm:pl-6">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Hamburger Menu on the LEFT (Opens Slide-out Drawer) - Mobile Only */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -224,63 +215,82 @@ export function SiteHeader() {
                   <span>Support</span>
                 </Link>
 
-                <hr className="my-3 border-border/70" />
+                {/* 8. Profile */}
+                <Link
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                >
+                  <User className="size-5 text-muted-foreground" />
+                  <span>Profile</span>
+                </Link>
 
-                {/* 8. Language Selector */}
-                <Collapsible open={langOpen} onOpenChange={setLangOpen}>
-                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-                    <span className="flex items-center gap-3.5">
-                      <Globe className="size-5 text-muted-foreground" />
-                      <span>Language</span>
-                    </span>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <span>{currentLangLabel}</span>
-                      <ChevronDown className={`size-3.5 transition-transform duration-200 ${langOpen ? "rotate-180" : ""}`} />
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-11 pr-2 py-1 space-y-1">
-                    {LANGUAGES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        type="button"
-                        onClick={() => handleSelectLang(lang.code)}
-                        className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      >
-                        <span>{lang.name} ({lang.label})</span>
-                        {selectedLang === lang.code && <Check className="size-3 text-primary" />}
-                      </button>
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* 9. Login / Dashboard */}
+                {/* Login / Profile / Dashboard */}
                 {user ? (
-                  <div className="space-y-1.5 pt-2">
+                  <div className="space-y-2 pt-2 border-t border-border/70">
+                    {/* User Profile Card */}
+                    <Link
+                      to="/profile"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 rounded-2xl bg-secondary/60 p-2.5 border border-border/60 hover:bg-secondary transition-colors"
+                    >
+                      <Avatar className="size-10 border border-border">
+                        {userAvatar ? (
+                          <AvatarImage src={userAvatar} alt={userName} className="object-cover" />
+                        ) : null}
+                        <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                          {userInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold text-foreground truncate">{userName}</span>
+                          <Badge variant="outline" className="text-[9px] uppercase px-1 py-0 h-4 font-semibold">
+                            {plan}
+                          </Badge>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground truncate block">{user.email}</span>
+                      </div>
+                    </Link>
+
+                    {/* Profile Link */}
+                    <Link
+                      to="/profile"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <User className="size-5 text-primary" />
+                      <span>My Profile & Account</span>
+                    </Link>
+
+                    {/* Dashboard Link */}
                     <Link
                       to="/dashboard"
                       onClick={() => setOpen(false)}
-                      className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
+                      className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
                     >
                       <LayoutDashboard className="size-5 text-primary" />
-                      <span>Dashboard</span>
+                      <span>Dashboard (My QRs)</span>
                     </Link>
+
                     {isAdmin ? (
                       <Link
                         to="/admin"
                         onClick={() => setOpen(false)}
-                        className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
+                        className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
                       >
                         <ShieldCheck className="size-5 text-primary" />
                         <span>Admin Panel</span>
                       </Link>
                     ) : null}
+
                     <button
                       type="button"
                       onClick={() => {
                         void signOut();
                         setOpen(false);
                       }}
-                      className="flex w-full items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+                      className="flex w-full items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <LogOut className="size-5" />
                       <span>Sign out</span>
@@ -296,19 +306,6 @@ export function SiteHeader() {
                     <span>Log in</span>
                   </Link>
                 )}
-              </div>
-
-              {/* Drawer Bottom Action Button */}
-              <div className="p-4 border-t border-border/60">
-                <Button
-                  asChild
-                  className="w-full bg-brand-gradient text-primary-foreground shadow-brand rounded-2xl"
-                  onClick={() => setOpen(false)}
-                >
-                  <Link to="/">
-                    <Plus className="mr-1.5 size-4" /> Create QR Code
-                  </Link>
-                </Button>
               </div>
             </SheetContent>
           </Sheet>
@@ -403,68 +400,106 @@ export function SiteHeader() {
             <Headphones className="size-4" />
             <span>Support</span>
           </Link>
+
+          <Link
+            to="/profile"
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            activeProps={{ className: "text-foreground bg-secondary font-semibold" }}
+          >
+            <User className="size-4" />
+            <span>Profile</span>
+          </Link>
         </nav>
 
         {/* Right Action Area (Responsive on all devices) */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Language Selector (desktop & tablet) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hidden md:flex h-9 gap-1.5 rounded-xl border border-border/60 bg-card/60 px-2.5 text-xs font-medium"
-              >
-                <Globe className="size-3.5 text-muted-foreground" />
-                <span>{currentLangLabel}</span>
-                <ChevronDown className="size-3 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 rounded-2xl border-border bg-card/95 p-1.5 backdrop-blur-md shadow-brand">
-              {LANGUAGES.map((lang) => (
-                <DropdownMenuItem
-                  key={lang.code}
-                  onClick={() => handleSelectLang(lang.code)}
-                  className="flex cursor-pointer items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-medium"
-                >
-                  <span className="flex items-center gap-2">
-                    <span>{lang.name}</span>
-                    <span className="text-[10px] text-muted-foreground">({lang.label})</span>
-                  </span>
-                  {selectedLang === lang.code && <Check className="size-3 text-primary" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {/* Theme Toggle Button */}
           <ThemeToggle />
 
           {/* User / Login */}
           {user ? (
-            <>
-              <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex h-9 rounded-xl">
-                <Link to="/dashboard">
-                  <LayoutDashboard className="mr-1.5 size-4" /> Dashboard
-                </Link>
-              </Button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {isAdmin ? (
                 <Button asChild variant="outline" size="sm" className="hidden md:inline-flex h-9 rounded-xl">
                   <Link to="/admin">
-                    <ShieldCheck className="mr-1.5 size-4" /> Admin
+                    <ShieldCheck className="mr-1.5 size-4 text-primary" /> Admin
                   </Link>
                 </Button>
               ) : null}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-9 rounded-xl"
-                aria-label="Sign out"
-                onClick={() => void signOut()}
-              >
-                <LogOut className="size-4" />
-              </Button>
-            </>
+
+              {/* User Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex items-center gap-2 h-9 rounded-xl border border-border/70 bg-card/70 px-2 hover:bg-secondary transition-colors"
+                  >
+                    <Avatar className="size-6 border border-border/80">
+                      {userAvatar ? (
+                        <AvatarImage src={userAvatar} alt={userName} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:inline-block max-w-[85px] truncate text-xs font-semibold text-foreground">
+                      {userName}
+                    </span>
+                    <ChevronDown className="size-3 text-muted-foreground opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" className="w-56 rounded-2xl border-border bg-card/95 p-1.5 backdrop-blur-md shadow-brand">
+                  <DropdownMenuLabel className="font-normal px-2.5 py-2">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground truncate">{userName}</span>
+                        <Badge variant="outline" className="text-[10px] uppercase font-semibold px-1.5 py-0 h-4">
+                          {plan}
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground truncate">{user.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="my-1 border-border/60" />
+                  <DropdownMenuItem asChild className="rounded-xl px-2.5 py-2 cursor-pointer">
+                    <Link to="/profile" className="flex items-center gap-2 text-xs font-medium text-foreground">
+                      <User className="size-4 text-primary" />
+                      <span>My Profile & Account</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-xl px-2.5 py-2 cursor-pointer">
+                    <Link to="/dashboard" className="flex items-center gap-2 text-xs font-medium text-foreground">
+                      <LayoutDashboard className="size-4 text-primary" />
+                      <span>Dashboard (My QRs)</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild className="rounded-xl px-2.5 py-2 cursor-pointer">
+                      <Link to="/admin" className="flex items-center gap-2 text-xs font-medium text-foreground">
+                        <ShieldCheck className="size-4 text-primary" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem asChild className="rounded-xl px-2.5 py-2 cursor-pointer">
+                    <Link to="/pricing" className="flex items-center gap-2 text-xs font-medium text-foreground">
+                      <Sparkles className="size-4 text-amber-500" />
+                      <span>Subscription Plan</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1 border-border/60" />
+                  <DropdownMenuItem
+                    onClick={() => void signOut()}
+                    className="rounded-xl px-2.5 py-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive flex items-center gap-2 text-xs font-medium"
+                  >
+                    <LogOut className="size-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             <>
               <Button asChild variant="outline" size="sm" className="h-9 gap-1.5 rounded-xl px-3 text-xs sm:text-sm">

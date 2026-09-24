@@ -25,8 +25,9 @@ export function useUserPlan() {
       return;
     }
 
-    // Demo user gets premium by default
-    if (user.email === "demo@bt-qr.app") {
+    // Master admin and demo user get premium by default
+    const cleanEmail = user.email?.toLowerCase().trim();
+    if (cleanEmail === "demo@bt-qr.app" || cleanEmail === "rahulkushwaha1842003@gmail.com") {
       setPlan("premium");
       setLoading(false);
       return;

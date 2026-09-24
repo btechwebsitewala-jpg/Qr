@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Copy, FileUp, Image as ImageIcon, Link2, Loader2, Video } from "lucide-react";
+import { Check, Copy, FileUp, Image as ImageIcon, Link2, Loader2, Lock, LogIn, Video } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -47,6 +47,12 @@ function ConvertPage() {
   const [copied, setCopied] = useState(false);
 
   const handleFile = async (file: File | undefined) => {
+    if (!user) {
+      toast.error("Authentication required", {
+        description: "Please log in or register to convert and host files.",
+      });
+      return;
+    }
     if (!file) return;
     if (file.size > MAX_UPLOAD_BYTES) {
       toast.error("File is larger than 500 MB");
@@ -95,45 +101,63 @@ function ConvertPage() {
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_320px]">
           <section className="rounded-3xl border border-border bg-card p-4 sm:p-6 shadow-sm">
-            <div
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                void handleFile(event.dataTransfer.files?.[0]);
-              }}
-              className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 p-6 sm:p-10 text-center"
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                className="hidden"
-                onChange={(event) => void handleFile(event.target.files?.[0])}
-              />
-              <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-gradient text-primary-foreground">
-                <FileUp className="size-6" />
-              </span>
-              <p className="mt-4 font-semibold">Drop your file here</p>
-              <p className="mt-1 text-sm text-muted-foreground">Maximum size 500 MB per file</p>
-              <Button
-                className="mt-5 bg-brand-gradient text-primary-foreground hover:opacity-90"
-                disabled={busy || !user}
-                onClick={() => inputRef.current?.click()}
-              >
-                {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                {busy ? "Converting…" : "Choose file"}
-              </Button>
-              {!user ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  <Link to="/auth" className="font-semibold text-primary hover:underline">
-                    Log in free
-                  </Link>{" "}
-                  to host files and keep your links.
+            {!user ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-8 sm:p-12 text-center">
+                <div className="flex size-16 items-center justify-center rounded-2xl bg-brand-gradient text-primary-foreground shadow-lg mb-4">
+                  <Lock className="size-8" />
+                </div>
+                <h2 className="text-xl font-bold sm:text-2xl text-foreground">
+                  Login Required to Convert Files
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                  Cloud file hosting (up to 500 MB) and instant QR code generation is exclusively available for registered users. Log in or create a free account to get started.
                 </p>
-              ) : null}
-              {busy || progress === 100 ? (
-                <Progress value={progress} className="mt-5 w-full max-w-sm" />
-              ) : null}
-            </div>
+                <div className="mt-6 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                  <Button asChild className="w-full sm:w-auto bg-brand-gradient text-primary-foreground font-bold shadow-md rounded-xl h-11 px-6">
+                    <Link to="/auth" search={{ redirect: "/convert" }}>
+                      <LogIn className="mr-2 size-4" /> Log In to Convert
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full sm:w-auto rounded-xl h-11 px-6">
+                    <Link to="/auth" search={{ redirect: "/convert" }}>
+                      Create Free Account
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void handleFile(event.dataTransfer.files?.[0]);
+                }}
+                className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 p-6 sm:p-10 text-center"
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => void handleFile(event.target.files?.[0])}
+                />
+                <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-gradient text-primary-foreground">
+                  <FileUp className="size-6" />
+                </span>
+                <p className="mt-4 font-semibold">Drop your file here</p>
+                <p className="mt-1 text-sm text-muted-foreground">Maximum size 500 MB per file</p>
+                <Button
+                  className="mt-5 bg-brand-gradient text-primary-foreground hover:opacity-90"
+                  disabled={busy}
+                  onClick={() => inputRef.current?.click()}
+                >
+                  {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                  {busy ? "Converting…" : "Choose file"}
+                </Button>
+                {busy || progress === 100 ? (
+                  <Progress value={progress} className="mt-5 w-full max-w-sm" />
+                ) : null}
+              </div>
+            )}
 
             {link ? (
               <div className="mt-6 space-y-3 rounded-2xl bg-secondary/50 p-4">
@@ -172,11 +196,20 @@ function ConvertPage() {
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-3xl border border-border bg-card p-4 sm:p-6 text-center shadow-sm">
               <p className="text-sm font-semibold">QR for your link</p>
-              <div className="mt-4 flex justify-center rounded-2xl bg-secondary/40 p-4">
-                <QRPreview value={link || "https://bt-qr.app"} style={DEFAULT_STYLE} size={220} />
+              <div className="mt-4 relative flex justify-center rounded-2xl bg-secondary/40 p-4 overflow-hidden">
+                <div className={!user ? "filter blur-md opacity-30 select-none pointer-events-none" : ""}>
+                  <QRPreview value={link || "https://bt-qr.app"} style={DEFAULT_STYLE} size={220} />
+                </div>
+                {!user && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs p-3 text-center z-10">
+                    <Lock className="size-6 text-primary mb-1" />
+                    <span className="text-xs font-bold text-foreground">QR Preview Locked</span>
+                    <span className="text-[10px] text-muted-foreground">Sign in to convert files</span>
+                  </div>
+                )}
               </div>
               <p className="mt-3 break-all text-xs text-muted-foreground">
-                {link ? link : "Upload a file to generate its QR code."}
+                {user ? (link ? link : "Upload a file to generate its QR code.") : "Login to convert files & generate QR."}
               </p>
             </div>
           </aside>

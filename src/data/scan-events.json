@@ -18,5 +18,175 @@
     "country": "IN",
     "city": "New Delhi",
     "referrer": "https://instagram.com"
+  },
+  {
+    "id": "scan-4xse9fu-1790282709558-kh6j",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:45:09.558Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790282641523-kbtn",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:44:01.524Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790282636803-jlar",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:43:56.803Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790282227654-ww9c",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:37:07.654Z",
+    "device_type": "Desktop",
+    "browser": "Other",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790281146209-sh1d",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:19:06.209Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790281110804-8qv4",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:18:30.804Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790281096604-9q9h",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:18:16.604Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790281074981-x0an",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:17:54.981Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790281027823-t89k",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T20:17:07.823Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790279384854-k7dm",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T19:49:44.854Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-4xse9fu-1790277480535-sn8b",
+    "short_code": "4xse9fu",
+    "scanned_at": "2026-09-24T19:18:00.535Z",
+    "device_type": "Desktop",
+    "browser": "Chrome",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-btweb-1790281624079-32tw",
+    "short_code": "btweb",
+    "scanned_at": "2026-09-24T20:27:04.079Z",
+    "device_type": "Desktop",
+    "browser": "Other",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-btweb-1790281596363-1euj",
+    "short_code": "btweb",
+    "scanned_at": "2026-09-24T20:26:36.363Z",
+    "device_type": "Desktop",
+    "browser": "Other",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-btweb-1790281579437-z9of",
+    "short_code": "btweb",
+    "scanned_at": "2026-09-24T20:26:19.437Z",
+    "device_type": "Desktop",
+    "browser": "Other",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-sample-1790283789489-jo7g",
+    "short_code": "sample",
+    "scanned_at": "2026-09-24T21:03:09.489Z",
+    "device_type": "Desktop",
+    "browser": "Other",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
+  },
+  {
+    "id": "scan-sample-1790283698018-qm49",
+    "short_code": "sample",
+    "scanned_at": "2026-09-24T21:01:38.018Z",
+    "device_type": "Mobile",
+    "browser": "Chrome Mobile",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "QR Code Scan Test"
+  },
+  {
+    "id": "scan-sample-1790282502152-kdwy",
+    "short_code": "sample",
+    "scanned_at": "2026-09-24T20:41:42.152Z",
+    "device_type": "Desktop",
+    "browser": "Other",
+    "country": "India",
+    "city": "New Delhi",
+    "referrer": "Direct Scan"
   }
 ]

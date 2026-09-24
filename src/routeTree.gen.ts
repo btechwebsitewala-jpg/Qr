@@ -21,6 +21,7 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as TypesRouteImport } from './routes/types'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as ApiDynamicRoutesRouteImport } from './routes/api/dynamic-routes'
 import { Route as FSplatRouteImport } from './routes/f.$'
 import { Route as RCodeRouteImport } from './routes/r.$code'
@@ -87,6 +88,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiDynamicRoutesRoute = ApiDynamicRoutesRouteImport.update({
   id: '/api/dynamic-routes',
   path: '/api/dynamic-routes',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/types': typeof TypesRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
+  '/profile': typeof AuthenticatedProfileRoute
   '/api/dynamic-routes': typeof ApiDynamicRoutesRoute
   '/f/$': typeof FSplatRoute
   '/r/$code': typeof RCodeRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/types': typeof TypesRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
+  '/profile': typeof AuthenticatedProfileRoute
   '/api/dynamic-routes': typeof ApiDynamicRoutesRoute
   '/f/$': typeof FSplatRoute
   '/r/$code': typeof RCodeRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/types': typeof TypesRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/api/dynamic-routes': typeof ApiDynamicRoutesRoute
   '/f/$': typeof FSplatRoute
   '/r/$code': typeof RCodeRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/types'
     | '/admin'
     | '/dashboard'
+    | '/profile'
     | '/api/dynamic-routes'
     | '/f/$'
     | '/r/$code'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/types'
     | '/admin'
     | '/dashboard'
+    | '/profile'
     | '/api/dynamic-routes'
     | '/f/$'
     | '/r/$code'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/types'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
+    | '/_authenticated/profile'
     | '/api/dynamic-routes'
     | '/f/$'
     | '/r/$code'
@@ -343,6 +355,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/dynamic-routes': {
       id: '/api/dynamic-routes'
       path: '/api/dynamic-routes'
@@ -406,11 +425,13 @@ const AuthenticatedDashboardRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRouteWithChildren
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRouteWithChildren,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -4,13 +4,19 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
+  Copy,
   Download,
   ExternalLink,
+  Eye,
+  Info,
   Loader2,
+  MousePointerClick,
+  Palette,
   Pencil,
   QrCode,
   Sparkles,
   Trash2,
+  TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -34,6 +40,8 @@ import { DEFAULT_STYLE, type QRStyle } from "@/lib/qr/render";
 import {
   deleteQrCode,
   listQrCodes,
+  makeShortCode,
+  shortUrl,
   updateQrCode,
   type QrCodeRow,
 } from "@/lib/qr/store";
@@ -61,6 +69,8 @@ function Dashboard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [editing, setEditing] = useState<QrCodeRow | null>(null);
+  const [staticInfoModal, setStaticInfoModal] = useState<QrCodeRow | null>(null);
+  const [showAllScansModal, setShowAllScansModal] = useState(false);
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
 
@@ -90,21 +100,48 @@ function Dashboard() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const convertToDynamic = useMutation({
+    mutationFn: async (row: QrCodeRow) => {
+      const code = row.short_code || makeShortCode(7);
+      const targetUrl = row.target_url || row.encoded_value;
+      await updateQrCode(row.id, {
+        is_dynamic: true,
+        short_code: code,
+        target_url: targetUrl,
+        encoded_value: shortUrl(code),
+      });
+      return { id: row.id, shortCode: code };
+    },
+    onSuccess: async () => {
+      toast.success("Upgraded to Dynamic QR Code!", {
+        description: "Real-time scan tracking and live destination editing are now active.",
+      });
+      setStaticInfoModal(null);
+      await queryClient.invalidateQueries({ queryKey: ["qr-codes"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const save = useMutation({
     mutationFn: async () => {
       if (!editing) return;
       const isDynamic = editing.is_dynamic;
-      const targetUrl = target.trim();
+      let targetUrl = target.trim();
+      if (targetUrl && !/^https?:\/\//i.test(targetUrl)) {
+        targetUrl = `https://${targetUrl}`;
+      }
       await updateQrCode(editing.id, {
         name: name.slice(0, 120),
         is_dynamic: isDynamic,
-        ...(isDynamic ? { target_url: targetUrl } : {}),
+        short_code: editing.short_code,
+        target_url: targetUrl || editing.target_url || editing.encoded_value,
+        encoded_value: isDynamic && editing.short_code ? shortUrl(editing.short_code) : editing.encoded_value,
       });
     },
     onSuccess: async () => {
-      toast.success("QR code updated successfully!", {
+      toast.success("Live changes saved successfully!", {
         description: editing?.is_dynamic
-          ? "Live destination updated! All existing and printed QR codes will now open this new URL."
+          ? "Live destination updated! All existing and printed QR codes will now open this new URL immediately."
           : "Saved changes to dashboard.",
       });
       setEditing(null);
@@ -114,6 +151,9 @@ function Dashboard() {
   });
 
   const totalScans = codes.reduce((sum, row) => sum + (row.scan_count ?? 0), 0);
+  const dynamicCodes = codes.filter((row) => row.is_dynamic);
+  const staticCodes = codes.filter((row) => !row.is_dynamic);
+  const sortedByScans = [...codes].sort((a, b) => (b.scan_count ?? 0) - (a.scan_count ?? 0));
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
@@ -161,6 +201,69 @@ function Dashboard() {
             <QrCode className="mr-2 size-4" /> Create new QR
           </Link>
         </Button>
+      </div>
+
+      {/* High-Level Stat Cards */}
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <div
+          onClick={() => setShowAllScansModal(true)}
+          className="group cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <BarChart3 className="size-4.5" />
+            </span>
+            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              Live Scans
+            </span>
+          </div>
+          <p className="mt-2.5 text-xs font-medium text-muted-foreground">Total Scans</p>
+          <div className="mt-0.5 flex items-baseline justify-between">
+            <p className="text-2xl font-bold tracking-tight text-foreground">{totalScans}</p>
+            <span className="text-[11px] font-medium text-primary underline underline-offset-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              View all
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-secondary text-foreground">
+              <QrCode className="size-4.5" />
+            </span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Total
+            </span>
+          </div>
+          <p className="mt-2.5 text-xs font-medium text-muted-foreground">Total QR Codes</p>
+          <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{codes.length}</p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Sparkles className="size-4.5" />
+            </span>
+            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              Tracked
+            </span>
+          </div>
+          <p className="mt-2.5 text-xs font-medium text-muted-foreground">Dynamic Tracked</p>
+          <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{dynamicCodes.length}</p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
+              <QrCode className="size-4.5" />
+            </span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Static
+            </span>
+          </div>
+          <p className="mt-2.5 text-xs font-medium text-muted-foreground">Static Standard</p>
+          <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{staticCodes.length}</p>
+        </div>
       </div>
 
       {isLoading ? (
@@ -214,12 +317,32 @@ function Dashboard() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {row.is_dynamic ? (
-                    <Button asChild variant="outline" size="sm">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="font-semibold gap-1.5 border-primary/30 text-foreground hover:bg-primary/5 hover:border-primary/60 cursor-pointer"
+                    >
                       <Link to="/dashboard/analytics/$id" params={{ id: row.id }}>
-                        <BarChart3 className="mr-1 size-4" /> Analytics
+                        <BarChart3 className="size-3.5 text-primary" /> Analytics
+                        <span className="ml-0.5 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-bold text-primary">
+                          {row.scan_count ?? 0}
+                        </span>
                       </Link>
                     </Button>
-                  ) : null}
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="font-medium gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                      onClick={() => setStaticInfoModal(row)}
+                    >
+                      <BarChart3 className="size-3.5 text-muted-foreground" /> Analytics
+                      <span className="ml-0.5 rounded-full bg-secondary px-1.5 py-0.2 text-[10px] font-semibold text-muted-foreground">
+                        Static
+                      </span>
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -276,96 +399,179 @@ function Dashboard() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="mt-2 space-y-4">
-            <div>
-              <Label htmlFor="qr-name" className="text-xs font-semibold text-foreground">
-                QR Code Name
-              </Label>
-              <Input
-                id="qr-name"
-                className="mt-1.5 rounded-xl border-border bg-background/50"
-                maxLength={120}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-
-            {editing?.is_dynamic ? (
-              <div className="space-y-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="qr-target" className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Sparkles className="size-3.5 text-emerald-500" />
-                      Live Destination URL (Change Anytime)
-                    </Label>
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      LIVE DYNAMIC
-                    </span>
-                  </div>
-                  <Input
-                    id="qr-target"
-                    className="mt-1.5 rounded-xl border-emerald-500/40 bg-background font-mono text-sm"
-                    maxLength={2000}
-                    placeholder="https://your-new-website.com"
-                    value={target}
-                    onChange={(event) => setTarget(event.target.value)}
+          {editing ? (
+            <div className="mt-2 space-y-4">
+              {/* Live QR Preview & Metadata Card */}
+              <div className="flex items-center gap-4 rounded-2xl border border-border/70 bg-secondary/30 p-3.5 shadow-inner">
+                <div className="shrink-0 rounded-xl bg-card p-2 shadow-sm border border-border/80">
+                  <QRPreview
+                    value={
+                      editing.is_dynamic && editing.short_code
+                        ? shortUrl(editing.short_code)
+                        : (target.trim() || editing.encoded_value)
+                    }
+                    style={styleOf(editing)}
+                    size={92}
                   />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary" className="text-[11px] font-semibold">
+                      {getQRType(editing.qr_type as QRTypeId).label}
+                    </Badge>
+                    <Badge
+                      className={
+                        editing.is_dynamic
+                          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
+                          : "border-0 bg-secondary text-secondary-foreground"
+                      }
+                    >
+                      {editing.is_dynamic ? "Live Dynamic" : "Static Code"}
+                    </Badge>
+                  </div>
+                  <p className="mt-1.5 font-mono text-xs text-muted-foreground truncate">
+                    {editing.is_dynamic && editing.short_code
+                      ? `Short link: /r/${editing.short_code}`
+                      : editing.encoded_value}
+                  </p>
+                  <div className="mt-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-lg text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                    >
+                      <Link to="/" search={{ edit: editing.id, type: editing.qr_type }}>
+                        <Palette className="size-3" /> Full Studio Designer &amp; Colors
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
 
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <CheckCircle2 className="size-4 shrink-0 text-emerald-500 mt-0.5" />
-                  <p>
-                    <strong>Live instant change:</strong> The printed barcode does NOT change. Anyone scanning your QR code will be redirected to this new URL immediately.
+              <div>
+                <Label htmlFor="qr-name" className="text-xs font-semibold text-foreground">
+                  QR Code Name
+                </Label>
+                <Input
+                  id="qr-name"
+                  className="mt-1.5 rounded-xl border-border bg-background/50"
+                  maxLength={120}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+
+              {editing.is_dynamic ? (
+                <div className="space-y-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="qr-target" className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Sparkles className="size-3.5 text-emerald-500" />
+                        Live Destination URL (Change Anytime)
+                      </Label>
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                        LIVE DYNAMIC
+                      </span>
+                    </div>
+                    <Input
+                      id="qr-target"
+                      className="mt-1.5 rounded-xl border-emerald-500/40 bg-background font-mono text-sm"
+                      maxLength={2000}
+                      placeholder="https://your-new-website.com"
+                      value={target}
+                      onChange={(event) => setTarget(event.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500 mt-0.5" />
+                    <p>
+                      <strong>Live instant change:</strong> The printed barcode does NOT change. Anyone scanning this QR code will immediately open this new destination URL.
+                    </p>
+                  </div>
+
+                  {editing.short_code && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-500/20 pt-2.5 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground font-mono truncate max-w-[190px]">
+                          /r/{editing.short_code}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-6 text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(shortUrl(editing.short_code));
+                            toast.success("Short redirect URL copied to clipboard!");
+                          }}
+                        >
+                          <Copy className="size-3" />
+                        </Button>
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
+                        onClick={async () => {
+                          try {
+                            let clean = target.trim();
+                            if (clean && !/^https?:\/\//i.test(clean)) clean = `https://${clean}`;
+                            await updateQrCode(editing.id, {
+                              name: name.slice(0, 120),
+                              is_dynamic: true,
+                              short_code: editing.short_code,
+                              target_url: clean || editing.target_url || editing.encoded_value,
+                              encoded_value: shortUrl(editing.short_code),
+                            });
+                            await queryClient.invalidateQueries({ queryKey: ["qr-codes"] });
+                            toast.success("Destination updated live! Opening redirect test...");
+                            window.open(`/r/${editing.short_code}`, "_blank");
+                          } catch (err) {
+                            toast.error("Could not test redirect: " + String(err));
+                          }
+                        }}
+                      >
+                        <ExternalLink className="mr-1.5 size-3.5" /> Save &amp; Test Live Redirect
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground">
+                      Convert to Dynamic Live QR
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-xl text-xs font-semibold text-primary border-primary/40 hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                      onClick={() => {
+                        if (editing) {
+                          setEditing({
+                            ...editing,
+                            is_dynamic: true,
+                            target_url: target || editing.encoded_value,
+                          });
+                          if (!target) setTarget(editing.encoded_value);
+                        }
+                      }}
+                    >
+                      <Sparkles className="mr-1.5 size-3.5" /> Enable Live URL Change
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    This code currently encodes static content directly. Enable dynamic mode so you can update its destination URL live anytime from this dashboard!
                   </p>
                 </div>
-
-                {editing.short_code && (
-                  <div className="flex items-center justify-between border-t border-emerald-500/20 pt-2.5 text-xs">
-                    <span className="text-muted-foreground font-mono truncate max-w-[240px]">
-                      Short link: /r/{editing.short_code}
-                    </span>
-                    <a
-                      href={`/r/${editing.short_code}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-                    >
-                      Test Live Redirect <ExternalLink className="size-3" />
-                    </a>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground">
-                    Convert to Dynamic Live QR
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-8 rounded-xl text-xs font-semibold text-primary border-primary/40 hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
-                    onClick={() => {
-                      if (editing) {
-                        setEditing({
-                          ...editing,
-                          is_dynamic: true,
-                          target_url: target || editing.encoded_value,
-                        });
-                        if (!target) setTarget(editing.encoded_value);
-                      }
-                    }}
-                  >
-                    <Sparkles className="mr-1.5 size-3.5" /> Enable Live URL Change
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  This code currently encodes static content directly. Enable dynamic mode so you can update its destination URL live anytime from this dashboard!
-                </p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ) : null}
 
           <DialogFooter className="mt-4 gap-2 sm:gap-0">
             <Button
@@ -382,6 +588,188 @@ function Dashboard() {
             >
               {save.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Static QR Analytics / Upgrade Information Dialog */}
+      <Dialog open={Boolean(staticInfoModal)} onOpenChange={(open) => !open && setStaticInfoModal(null)}>
+        <DialogContent className="max-w-md rounded-3xl border-border bg-card p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <BarChart3 className="size-5 text-primary" /> Static QR Analytics
+            </DialogTitle>
+          </DialogHeader>
+
+          {staticInfoModal && (
+            <div className="mt-3 space-y-4">
+              <div className="flex items-center gap-3.5 rounded-2xl border border-border/80 bg-secondary/30 p-3">
+                <div className="shrink-0 rounded-xl bg-card p-1.5 border border-border/80">
+                  <QRPreview value={staticInfoModal.encoded_value} style={styleOf(staticInfoModal)} size={72} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-sm truncate">{staticInfoModal.name}</h4>
+                  <Badge variant="secondary" className="mt-1 text-[11px]">Static Standard</Badge>
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground truncate">
+                    {staticInfoModal.target_url || staticInfoModal.encoded_value}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-xs text-muted-foreground space-y-2">
+                <div className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
+                  <Info className="size-4 shrink-0" /> Why are scans 0 for Static QRs?
+                </div>
+                <p>
+                  Static QR codes encode information directly into the visual pixel pattern. When someone scans it, their camera opens the link directly without routing through a redirect analytics server.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 text-xs text-muted-foreground space-y-2">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <Sparkles className="size-4 shrink-0 text-emerald-500" /> Unlock Real-Time Analytics with Dynamic QR
+                </div>
+                <ul className="space-y-1 pl-4 list-disc text-foreground/80">
+                  <li>Track total scans with live instant counts</li>
+                  <li>View device types (Mobile, Tablet, Desktop) and browsers</li>
+                  <li>View geographic scan distribution (Country &amp; City)</li>
+                  <li>Update destination URL anytime without re-printing</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              className="rounded-xl cursor-pointer"
+              onClick={() => setStaticInfoModal(null)}
+            >
+              Close
+            </Button>
+            {staticInfoModal && (
+              <Button
+                className="rounded-xl bg-brand-gradient text-primary-foreground font-semibold shadow-brand hover:opacity-95 cursor-pointer gap-1.5"
+                disabled={convertToDynamic.isPending}
+                onClick={() => convertToDynamic.mutate(staticInfoModal)}
+              >
+                {convertToDynamic.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Sparkles className="size-4" />
+                )}
+                Upgrade to Dynamic &amp; Start Tracking
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* All Scans Breakdown Modal */}
+      <Dialog open={showAllScansModal} onOpenChange={setShowAllScansModal}>
+        <DialogContent className="max-w-2xl rounded-3xl border-border bg-card p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between text-xl font-bold">
+              <span className="flex items-center gap-2">
+                <BarChart3 className="size-5 text-primary" /> Total Scans Breakdown
+              </span>
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                {totalScans} Total Scans
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="mt-3 max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+            {sortedByScans.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No QR codes created yet.</p>
+            ) : (
+              sortedByScans.map((row) => {
+                const count = row.scan_count ?? 0;
+                const percentage = totalScans > 0 ? Math.round((count / totalScans) * 100) : 0;
+                return (
+                  <div
+                    key={row.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/20 p-3.5 hover:bg-secondary/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="shrink-0 rounded-xl bg-card p-1.5 border border-border/70">
+                        <QRPreview value={row.encoded_value} style={styleOf(row)} size={48} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-sm truncate">{row.name}</h4>
+                          <Badge
+                            className={
+                              row.is_dynamic
+                                ? "border-0 bg-brand-gradient text-[10px] text-primary-foreground py-0"
+                                : "border-0 bg-secondary text-[10px] text-secondary-foreground py-0"
+                            }
+                          >
+                            {row.is_dynamic ? "Dynamic" : "Static"}
+                          </Badge>
+                        </div>
+                        <p className="mt-0.5 font-mono text-[11px] text-muted-foreground truncate">
+                          {row.is_dynamic && row.short_code ? `/r/${row.short_code}` : (row.target_url || row.encoded_value)}
+                        </p>
+                        {totalScans > 0 && row.is_dynamic && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <div className="h-1.5 flex-1 rounded-full bg-secondary overflow-hidden max-w-[140px]">
+                              <div
+                                className="h-1.5 rounded-full bg-brand-gradient"
+                                style={{ width: `${Math.min(100, percentage)}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-mono">{percentage}%</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
+                      <div className="text-right">
+                        <span className="text-base font-bold text-foreground">{count}</span>
+                        <span className="text-xs text-muted-foreground ml-1">scans</span>
+                      </div>
+                      {row.is_dynamic ? (
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-xl text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10 cursor-pointer"
+                          onClick={() => setShowAllScansModal(false)}
+                        >
+                          <Link to="/dashboard/analytics/$id" params={{ id: row.id }}>
+                            <BarChart3 className="size-3" /> Full Analytics
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-xl text-xs gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                          onClick={() => {
+                            setShowAllScansModal(false);
+                            setStaticInfoModal(row);
+                          }}
+                        >
+                          <Sparkles className="size-3 text-amber-500" /> Enable Tracking
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              className="rounded-xl w-full sm:w-auto cursor-pointer"
+              onClick={() => setShowAllScansModal(false)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

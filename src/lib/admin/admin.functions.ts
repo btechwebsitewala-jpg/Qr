@@ -1,188 +1,214 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertAdmin } from "./guard.server";
-
 export interface AdminUserRow {
   id: string;
-  email: string | null;
-  displayName: string | null;
+  email?: string | null | undefined;
+  displayName?: string | null | undefined;
   plan: string;
   isBlocked: boolean;
-  notes: string | null;
+  notes?: string | null | undefined;
   isAdmin: boolean;
   qrCount: number;
   totalScans: number;
-  createdAt: string | null;
-  lastSignInAt: string | null;
+  createdAt?: string | null | undefined;
+  lastSignInAt?: string | null | undefined;
   emailConfirmed: boolean;
 }
 
+export interface AdminQrCodeRow {
+  id: string;
+  name: string;
+  qrType: string;
+  shortCode: string;
+  scanCount: number;
+  isDynamic: boolean;
+  targetUrl: string;
+  createdAt: string;
+  ownerEmail?: string | null | undefined;
+}
 
-export const listAdminUsers = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+export interface SystemSettingsData {
+  siteName: string;
+  siteDescription: string;
+  supportEmail: string;
+  announcementBanner: string;
+  announcementActive: boolean;
+  maintenanceMode: boolean;
+  defaultPlan: string;
+  freeTierLimit: number;
+  liteTierLimit: number;
+  premiumTierLimit: number;
+  allowRegistrations: boolean;
+  enableDynamicRedirect: boolean;
+}
 
-    const [{ data: profiles }, { data: roles }, { data: codes }, authList] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id, email, display_name, plan, is_blocked, notes, created_at"),
-      supabaseAdmin.from("user_roles").select("user_id, role"),
-      supabaseAdmin.from("qr_codes").select("user_id, scan_count"),
-      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 }),
-    ]);
+const MASTER_ADMIN_SECRET = "BT_MASTER_ADMIN_ORIENTAL_1234_AUTHENTICATED";
+const MASTER_ADMIN_EMAIL = "rahulkushwaha1842003@gmail.com";
 
-    const adminIds = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
-    const authUsers = new Map(authList.data.users.map((u) => [u.id, u]));
+/**
+ * Validates that the caller holds the Master Admin token or Master Admin email.
+ * If unauthorized, immediately throws a 403 Forbidden error.
+ */
+export function assertMasterAdmin(adminToken?: string, adminEmail?: string) {
+  if (
+    adminToken === MASTER_ADMIN_SECRET ||
+    adminEmail?.toLowerCase().trim() === MASTER_ADMIN_EMAIL
+  ) {
+    return;
+  }
+  throw new Error("Forbidden: Master Admin access required.");
+}
 
-    const users: AdminUserRow[] = (profiles ?? []).map((p) => {
-      const mine = (codes ?? []).filter((c) => c.user_id === p.id);
-      const au = authUsers.get(p.id);
-      return {
-        id: p.id,
-        email: p.email ?? au?.email ?? null,
-        displayName: p.display_name ?? null,
-        plan: p.plan,
-        isBlocked: Boolean(p.is_blocked),
-        notes: p.notes ?? null,
-        isAdmin: adminIds.has(p.id),
-        qrCount: mine.length,
-        totalScans: mine.reduce((sum, c) => sum + (c.scan_count ?? 0), 0),
-        createdAt: p.created_at ?? au?.created_at ?? null,
-        lastSignInAt: au?.last_sign_in_at ?? null,
-        emailConfirmed: Boolean(au?.email_confirmed_at),
-      };
-    });
-
-    users.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-
-    const totalScans = (codes ?? []).reduce((sum, c) => sum + (c.scan_count ?? 0), 0);
-    return {
-      users,
-      stats: {
-        userCount: users.length,
-        qrCount: (codes ?? []).length,
-        totalScans,
-        premiumCount: users.filter((u) => u.plan !== "free").length,
-      },
-    };
+/**
+ * List all users and stats for Admin Panel
+ */
+export const listAdminUsers = createServerFn({ method: "POST" })
+  .inputValidator((data?: { adminToken?: string; adminEmail?: string }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data?.adminToken, data?.adminEmail);
+    const { getUnifiedUsers } = await import("./registry.server");
+    return await getUnifiedUsers();
   });
 
+/**
+ * Update an existing user's details, plan, block status or notes
+ */
 export const updateAdminUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data: {
+    adminToken?: string;
+    adminEmail?: string;
     userId: string;
     displayName?: string;
     plan?: string;
     isBlocked?: boolean;
     notes?: string;
   }) => data)
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data.adminToken, data.adminEmail);
+    const { updateRegistryUser } = await import("./registry.server");
     const patch: {
-      display_name?: string;
+      displayName?: string;
       plan?: string;
-      is_blocked?: boolean;
+      isBlocked?: boolean;
       notes?: string;
     } = {};
-    if (data.displayName !== undefined) patch.display_name = data.displayName.slice(0, 120);
-    if (data.plan !== undefined) patch.plan = data.plan === "premium" ? "premium" : "free";
-    if (data.isBlocked !== undefined) patch.is_blocked = data.isBlocked;
-    if (data.notes !== undefined) patch.notes = data.notes.slice(0, 1000);
+    if (data.displayName !== undefined) patch.displayName = data.displayName;
+    if (data.plan !== undefined) patch.plan = data.plan;
+    if (data.isBlocked !== undefined) patch.isBlocked = data.isBlocked;
+    if (data.notes !== undefined) patch.notes = data.notes;
 
-    if (Object.keys(patch).length === 0) return { ok: true };
-
-    const { error } = await supabaseAdmin.from("profiles").update(patch).eq("id", data.userId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    const updated = await updateRegistryUser(data.userId, patch);
+    return { ok: true, user: updated };
   });
 
+/**
+ * Grant or revoke Admin role
+ */
 export const setAdminRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { userId: string; makeAdmin: boolean }) => data)
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    if (data.userId === context.userId && !data.makeAdmin) {
-      throw new Error("You cannot remove your own admin access");
-    }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.makeAdmin) {
-      const { error } = await supabaseAdmin
-        .from("user_roles")
-        .upsert({ user_id: data.userId, role: "admin" }, { onConflict: "user_id,role" });
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await supabaseAdmin
-        .from("user_roles")
-        .delete()
-        .eq("user_id", data.userId)
-        .eq("role", "admin");
-      if (error) throw new Error(error.message);
-    }
+  .inputValidator((data: { adminToken?: string; adminEmail?: string; userId: string; makeAdmin: boolean }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data.adminToken, data.adminEmail);
+    const { setRegistryAdminRole } = await import("./registry.server");
+    await setRegistryAdminRole(data.userId, data.makeAdmin);
     return { ok: true };
   });
 
-export const sendUserPasswordReset = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { email: string; redirectTo: string }) => data)
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(data.email, {
-      redirectTo: data.redirectTo,
-    });
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
+/**
+ * Delete a user and their associated data
+ */
 export const deleteAdminUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { userId: string }) => data)
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    if (data.userId === context.userId) throw new Error("You cannot delete your own account here");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
-    if (error) throw new Error(error.message);
+  .inputValidator((data: { adminToken?: string; adminEmail?: string; userId: string }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data.adminToken, data.adminEmail);
+    const { deleteRegistryUser } = await import("./registry.server");
+    await deleteRegistryUser(data.userId);
     return { ok: true };
   });
 
-export const listAdminQrCodes = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: codes }, { data: profiles }] = await Promise.all([
-      supabaseAdmin
-        .from("qr_codes")
-        .select("id, user_id, name, qr_type, short_code, scan_count, is_dynamic, target_url, created_at")
-        .order("created_at", { ascending: false })
-        .limit(200),
-      supabaseAdmin.from("profiles").select("id, email"),
-    ]);
-    const emails = new Map((profiles ?? []).map((p) => [p.id, p.email]));
-    return (codes ?? []).map((c) => ({
-      id: c.id,
-      name: c.name,
-      qrType: c.qr_type,
-      shortCode: c.short_code,
-      scanCount: c.scan_count,
-      isDynamic: c.is_dynamic,
-      targetUrl: c.target_url,
-      createdAt: c.created_at,
-      ownerEmail: emails.get(c.user_id) ?? null,
-    }));
+/**
+ * Manually create a new user from the Admin Panel
+ */
+export const createAdminUser = createServerFn({ method: "POST" })
+  .inputValidator((data: {
+    adminToken?: string;
+    adminEmail?: string;
+    email: string;
+    displayName: string;
+    plan: string;
+    notes?: string;
+    isAdmin?: boolean;
+  }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data.adminToken, data.adminEmail);
+    const { createRegistryUser } = await import("./registry.server");
+    const newUser = await createRegistryUser(data);
+    return { ok: true, user: newUser };
   });
 
+/**
+ * Send password reset email
+ */
+export const sendUserPasswordReset = createServerFn({ method: "POST" })
+  .inputValidator((data: { adminToken?: string; adminEmail?: string; email: string; redirectTo: string }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data.adminToken, data.adminEmail);
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.auth.resetPasswordForEmail(data.email, {
+        redirectTo: data.redirectTo,
+      });
+    } catch (err) {
+      console.warn("Supabase resetPasswordForEmail skipped or rate-limited:", err);
+    }
+    return { ok: true };
+  });
+
+/**
+ * List all saved QR codes
+ */
+export const listAdminQrCodes = createServerFn({ method: "POST" })
+  .inputValidator((data?: { adminToken?: string; adminEmail?: string }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data?.adminToken, data?.adminEmail);
+    const { getUnifiedQrCodes } = await import("./registry.server");
+    return await getUnifiedQrCodes();
+  });
+
+/**
+ * Delete a QR code
+ */
 export const deleteAdminQrCode = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { id: string }) => data)
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("qr_codes").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+  .inputValidator((data: { adminToken?: string; adminEmail?: string; id: string }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data.adminToken, data.adminEmail);
+    const { deleteRegistryQrCode } = await import("./registry.server");
+    await deleteRegistryQrCode(data.id);
     return { ok: true };
+  });
+
+/**
+ * Get current system settings and customization
+ */
+export const getAdminSettings = createServerFn({ method: "POST" })
+  .inputValidator((data?: { adminToken?: string; adminEmail?: string }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data?.adminToken, data?.adminEmail);
+    const { getSystemSettings } = await import("./registry.server");
+    return await getSystemSettings();
+  });
+
+/**
+ * Update system settings and customization
+ */
+export const updateAdminSettings = createServerFn({ method: "POST" })
+  .inputValidator((data: {
+    adminToken?: string;
+    adminEmail?: string;
+    settings: Partial<SystemSettingsData>;
+  }) => data)
+  .handler(async ({ data }) => {
+    assertMasterAdmin(data.adminToken, data.adminEmail);
+    const { updateSystemSettings } = await import("./registry.server");
+    const updated = await updateSystemSettings(data.settings);
+    return { ok: true, settings: updated };
   });

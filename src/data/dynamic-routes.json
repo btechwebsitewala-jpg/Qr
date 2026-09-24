@@ -2,15 +2,15 @@
   {
     "short_code": "btweb",
     "target_url": "https://btechwebsitewala.com",
-    "scan_count": 250,
-    "updated_at": "2026-09-22T21:05:23.478Z"
+    "scan_count": 253,
+    "updated_at": "2026-09-24T20:27:20.477Z"
   },
   {
     "short_code": "sample",
     "target_url": "https://bt-qr.app",
     "name": "Sample QR",
-    "scan_count": 12,
-    "updated_at": "2026-09-20T00:00:00.000Z"
+    "scan_count": 15,
+    "updated_at": "2026-09-24T21:03:09.489Z"
   },
   {
     "short_code": "doc33",
@@ -32,5 +32,40 @@
     "name": "URL / Link QR",
     "scan_count": 3,
     "updated_at": "2026-09-22T21:15:56.997Z"
+  },
+  {
+    "short_code": "3jcfdh6",
+    "target_url": "https://www.diagnosticshub.in/health-packages",
+    "name": "URL / Link QR",
+    "scan_count": 0,
+    "updated_at": "2026-09-24T18:17:10.735Z"
+  },
+  {
+    "short_code": "7c6suid",
+    "target_url": "https://www.diagnosticshub.in/health-packages",
+    "name": "URL / Link QR",
+    "scan_count": 0,
+    "updated_at": "2026-09-24T18:17:14.307Z"
+  },
+  {
+    "short_code": "b2mcij2",
+    "target_url": "https://www.diagnosticshub.in/health-packages",
+    "name": "URL / Link QR",
+    "scan_count": 0,
+    "updated_at": "2026-09-24T19:13:04.140Z"
+  },
+  {
+    "short_code": "4xse9fu",
+    "target_url": "https://www.diagnosticshub.in/",
+    "name": "BtechwebsiteWala",
+    "scan_count": 11,
+    "updated_at": "2026-09-24T20:45:09.557Z"
+  },
+  {
+    "short_code": "9uw7h7y",
+    "target_url": "https://www.btechwebsitewala.com/",
+    "name": "URL / Link QR",
+    "scan_count": 0,
+    "updated_at": "2026-09-24T19:51:26.822Z"
   }
 ]
