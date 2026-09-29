@@ -580,13 +580,11 @@ function ProfilePage() {
 
                 <CardFooter className="border-t border-border/60 p-4 flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">
-                    Need higher scan quotas or custom enterprise features?
+                    All features, dynamic QR codes, and analytics are 100% Free Forever for your account.
                   </span>
-                  <Button asChild size="sm" className="rounded-xl bg-primary text-primary-foreground">
-                    <Link to="/pricing">
-                      <Sparkles className="mr-1.5 size-4" /> View Pricing
-                    </Link>
-                  </Button>
+                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold px-3 py-1">
+                    100% Free Forever
+                  </Badge>
                 </CardFooter>
               </Card>
             </TabsContent>

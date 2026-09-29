@@ -344,11 +344,11 @@ function Index() {
         {/* 3D Avatar Stage Spotlight */}
         <section id="character-standee-section" className="mx-auto w-full max-w-7xl px-3 sm:px-8 py-12 sm:py-20 lg:px-12">
           <div className="mx-auto max-w-6xl text-center mb-7 sm:mb-10">
-            <div className="inline-flex items-center gap-2 rounded-full border-2 border-primary/30 bg-primary/10 px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-primary">
+            <div className="inline-flex items-center gap-2 rounded-full border-2 border-emerald-500/30 bg-emerald-500/10 px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
               <Sparkles className="size-3.5 sm:size-4 animate-pulse shrink-0" />
               <span>Signage &amp; Poster Mode</span>
-              <Badge className="border-0 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] sm:text-xs px-2 py-0.5 font-bold ml-1">
-                <Crown className="mr-1 size-3 shrink-0" /> PAID PLAN
+              <Badge className="border-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] sm:text-xs px-2 py-0.5 font-bold ml-1">
+                <Sparkles className="mr-1 size-3 shrink-0 text-emerald-500" /> 100% FREE
               </Badge>
             </div>
             <h2 className="mt-4 font-display text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground leading-tight">
@@ -527,7 +527,7 @@ function Index() {
                   Generate Free QR Now
                 </Button>
                 <Button asChild size="lg" variant="outline" className="px-10 py-6 text-lg font-bold border-2 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:scale-105 transition-transform">
-                  <Link to="/pricing">Explore Pro Features</Link>
+                  <Link to="/scanner">Try Web QR Scanner</Link>
                 </Button>
               </div>
             </div>

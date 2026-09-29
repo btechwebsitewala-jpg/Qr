@@ -8,6 +8,7 @@ import {
   Download,
   ExternalLink,
   Eye,
+  Globe2,
   Info,
   Loader2,
   MousePointerClick,
@@ -22,6 +23,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { QRPreview } from "@/components/qr/QRPreview";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +44,7 @@ import {
   listQrCodes,
   makeShortCode,
   shortUrl,
+  syncDynamicRouteToServer,
   updateQrCode,
   type QrCodeRow,
 } from "@/lib/qr/store";
@@ -108,7 +111,7 @@ function Dashboard() {
         is_dynamic: true,
         short_code: code,
         target_url: targetUrl,
-        encoded_value: shortUrl(code),
+        encoded_value: targetUrl,
       });
       return { id: row.id, shortCode: code };
     },
@@ -125,18 +128,30 @@ function Dashboard() {
   const save = useMutation({
     mutationFn: async () => {
       if (!editing) return;
-      const isDynamic = editing.is_dynamic;
+      const isDynamic = Boolean(editing.is_dynamic);
       let targetUrl = target.trim();
       if (targetUrl && !/^https?:\/\//i.test(targetUrl)) {
         targetUrl = `https://${targetUrl}`;
       }
+      const code = (editing.short_code || makeShortCode(7)).trim();
+      const finalTarget = targetUrl || editing.target_url || editing.encoded_value;
+
       await updateQrCode(editing.id, {
         name: name.slice(0, 120),
         is_dynamic: isDynamic,
-        short_code: editing.short_code,
-        target_url: targetUrl || editing.target_url || editing.encoded_value,
-        encoded_value: isDynamic && editing.short_code ? shortUrl(editing.short_code) : editing.encoded_value,
+        short_code: code,
+        target_url: finalTarget,
+        encoded_value: finalTarget,
       });
+
+      if (isDynamic && finalTarget) {
+        await syncDynamicRouteToServer({
+          short_code: code,
+          target_url: finalTarget,
+          name: name.slice(0, 120),
+          scan_count: editing.scan_count ?? 0,
+        });
+      }
     },
     onSuccess: async () => {
       toast.success("Live changes saved successfully!", {
@@ -291,7 +306,7 @@ function Dashboard() {
                 className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:p-5"
               >
                 <div className="shrink-0 rounded-2xl bg-secondary/50 p-2">
-                  <QRPreview value={row.encoded_value} style={styleOf(row)} size={96} />
+                  <QRPreview value={row.target_url || row.encoded_value} style={styleOf(row)} size={96} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -349,7 +364,7 @@ function Dashboard() {
                     onClick={() => {
                       setEditing(row);
                       setName(row.name);
-                      setTarget(row.target_url ?? "");
+                      setTarget(row.target_url || row.encoded_value || "");
                     }}
                   >
                     <Pencil className="mr-1 size-4" /> Edit
@@ -359,7 +374,7 @@ function Dashboard() {
                     size="sm"
                     onClick={() =>
                       void downloadQR({
-                        value: row.encoded_value,
+                        value: row.target_url || row.encoded_value,
                         style: styleOf(row),
                         format: "png",
                         size: 1000,
@@ -369,9 +384,9 @@ function Dashboard() {
                   >
                     <Download className="mr-1 size-4" /> PNG
                   </Button>
-                  {row.is_dynamic ? (
-                    <Button asChild variant="ghost" size="icon" aria-label="Open link">
-                      <a href={row.encoded_value} target="_blank" rel="noreferrer noopener">
+                  {((row.target_url || row.encoded_value) && /^https?:\/\//i.test(row.target_url || row.encoded_value)) ? (
+                    <Button asChild variant="ghost" size="icon" aria-label="Open destination website" title="Open Destination Website" className="cursor-pointer text-primary hover:text-primary hover:bg-primary/10">
+                      <a href={row.target_url || row.encoded_value} target="_blank" rel="noreferrer noopener">
                         <ExternalLink className="size-4" />
                       </a>
                     </Button>
@@ -462,112 +477,147 @@ function Dashboard() {
                 />
               </div>
 
-              {editing.is_dynamic ? (
-                <div className="space-y-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="qr-target" className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <Sparkles className="size-3.5 text-emerald-500" />
-                        Live Destination URL (Change Anytime)
-                      </Label>
-                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                        LIVE DYNAMIC
-                      </span>
-                    </div>
-                    <Input
-                      id="qr-target"
-                      className="mt-1.5 rounded-xl border-emerald-500/40 bg-background font-mono text-sm"
-                      maxLength={2000}
-                      placeholder="https://your-new-website.com"
-                      value={target}
-                      onChange={(event) => setTarget(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500 mt-0.5" />
-                    <p>
-                      <strong>Live instant change:</strong> The printed barcode does NOT change. Anyone scanning this QR code will immediately open this new destination URL.
-                    </p>
-                  </div>
-
-                  {editing.short_code && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-500/20 pt-2.5 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-muted-foreground font-mono truncate max-w-[190px]">
-                          /r/{editing.short_code}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-6 text-muted-foreground hover:text-foreground"
-                          onClick={() => {
-                            void navigator.clipboard.writeText(shortUrl(editing.short_code));
-                            toast.success("Short redirect URL copied to clipboard!");
-                          }}
-                        >
-                          <Copy className="size-3" />
-                        </Button>
-                      </div>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
-                        onClick={async () => {
-                          try {
-                            let clean = target.trim();
-                            if (clean && !/^https?:\/\//i.test(clean)) clean = `https://${clean}`;
-                            await updateQrCode(editing.id, {
-                              name: name.slice(0, 120),
-                              is_dynamic: true,
-                              short_code: editing.short_code,
-                              target_url: clean || editing.target_url || editing.encoded_value,
-                              encoded_value: shortUrl(editing.short_code),
-                            });
-                            await queryClient.invalidateQueries({ queryKey: ["qr-codes"] });
-                            toast.success("Destination updated live! Opening redirect test...");
-                            window.open(`/r/${editing.short_code}`, "_blank");
-                          } catch (err) {
-                            toast.error("Could not test redirect: " + String(err));
-                          }
-                        }}
-                      >
-                        <ExternalLink className="mr-1.5 size-3.5" /> Save &amp; Test Live Redirect
-                      </Button>
-                    </div>
-                  )}
+              {/* QR Mode & Real-Time Tracking Selector */}
+              <div className="rounded-2xl border border-border/80 bg-secondary/20 p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-primary" /> QR Tracking Mode:
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-bold">
+                    {editing.is_dynamic ? "⚡ Live Dynamic (Recommended)" : "Direct Static"}
+                  </Badge>
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-foreground">
-                      Convert to Dynamic Live QR
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const code = editing.short_code || makeShortCode(7);
+                      setEditing({ ...editing, is_dynamic: true, short_code: code });
+                    }}
+                    className={cn(
+                      "flex flex-col text-left p-2.5 rounded-xl border transition-all cursor-pointer",
+                      editing.is_dynamic
+                        ? "border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30 text-foreground"
+                        : "border-border bg-card/60 hover:bg-secondary/40 text-muted-foreground",
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-bold flex items-center gap-1">
+                        <Sparkles className="size-3 text-emerald-500" /> Dynamic Live
+                      </span>
+                      {editing.is_dynamic && <CheckCircle2 className="size-3.5 text-emerald-500" />}
+                    </div>
+                    <p className="text-[10px] leading-tight text-muted-foreground">
+                      Edit destination anytime + live scan tracking.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing({ ...editing, is_dynamic: false });
+                    }}
+                    className={cn(
+                      "flex flex-col text-left p-2.5 rounded-xl border transition-all cursor-pointer",
+                      !editing.is_dynamic
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/30 text-foreground"
+                        : "border-border bg-card/60 hover:bg-secondary/40 text-muted-foreground",
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-bold flex items-center gap-1">
+                        <QrCode className="size-3 text-primary" /> Static Direct
+                      </span>
+                      {!editing.is_dynamic && <CheckCircle2 className="size-3.5 text-primary" />}
+                    </div>
+                    <p className="text-[10px] leading-tight text-muted-foreground">
+                      Direct website URL in pixels (offline, no stats).
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Website Destination URL Input (Always available!) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="qr-target" className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Globe2 className="size-3.5 text-primary" />
+                    Website Destination URL
+                  </Label>
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {editing.is_dynamic ? "UPDATES LIVE ON ALL SCANS" : "DIRECT LINK"}
+                  </span>
+                </div>
+                <Input
+                  id="qr-target"
+                  className="rounded-xl border-border bg-background font-mono text-sm"
+                  maxLength={2000}
+                  placeholder="https://your-website.com"
+                  value={target}
+                  onChange={(event) => setTarget(event.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {editing.is_dynamic
+                    ? "⚡ Live Instant Change: When anyone scans this QR code, they will immediately open this new website URL. The printed barcode does NOT need to be changed."
+                    : "🎯 Static Code: Encoded directly into QR code pixels. Switch to Dynamic Live above to track scans and update destinations live anytime."}
+                </p>
+              </div>
+
+              {editing.is_dynamic && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground font-mono truncate max-w-[190px]">
+                      /r/{editing.short_code || "code"}
                     </span>
                     <Button
                       type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 rounded-xl text-xs font-semibold text-primary border-primary/40 hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                      variant="ghost"
+                      size="icon"
+                      className="size-6 text-muted-foreground hover:text-foreground"
                       onClick={() => {
-                        if (editing) {
-                          setEditing({
-                            ...editing,
-                            is_dynamic: true,
-                            target_url: target || editing.encoded_value,
-                          });
-                          if (!target) setTarget(editing.encoded_value);
-                        }
+                        const code = editing.short_code || makeShortCode(7);
+                        void navigator.clipboard.writeText(shortUrl(code));
+                        toast.success("Short redirect URL copied to clipboard!");
                       }}
                     >
-                      <Sparkles className="mr-1.5 size-3.5" /> Enable Live URL Change
+                      <Copy className="size-3" />
                     </Button>
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    This code currently encodes static content directly. Enable dynamic mode so you can update its destination URL live anytime from this dashboard!
-                  </p>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
+                    onClick={async () => {
+                      try {
+                        let clean = target.trim();
+                        if (clean && !/^https?:\/\//i.test(clean)) clean = `https://${clean}`;
+                        const code = (editing.short_code || makeShortCode(7)).trim();
+                        await updateQrCode(editing.id, {
+                          name: name.slice(0, 120),
+                          is_dynamic: true,
+                          short_code: code,
+                          target_url: clean || editing.target_url || editing.encoded_value,
+                          encoded_value: clean || editing.target_url || editing.encoded_value,
+                        });
+                        await syncDynamicRouteToServer({
+                          short_code: code,
+                          target_url: clean || editing.target_url || editing.encoded_value,
+                          name: name.slice(0, 120),
+                          scan_count: editing.scan_count ?? 0,
+                        });
+                        await queryClient.invalidateQueries({ queryKey: ["qr-codes"] });
+                        toast.success("Destination updated live! Opening redirect test...");
+                        window.open(`/r/${code}`, "_blank");
+                      } catch (err) {
+                        toast.error("Could not test redirect: " + String(err));
+                      }
+                    }}
+                  >
+                    <ExternalLink className="mr-1.5 size-3.5" /> Save &amp; Test Live Redirect
+                  </Button>
                 </div>
               )}
             </div>

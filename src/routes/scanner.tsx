@@ -472,12 +472,6 @@ function Scanner() {
 
   const handleImageFile = useCallback(
     async (file: File) => {
-      if (!user) {
-        toast.error("Authentication required", {
-          description: "Please log in to upload and scan QR images.",
-        });
-        return;
-      }
       if (!file.type.startsWith("image/")) {
         toast.error("Please upload an image file (PNG, JPG, WebP, SVG, Screenshot)");
         return;
@@ -610,31 +604,6 @@ function Scanner() {
                   : "border-border/80 bg-secondary/30",
             )}
           >
-            {!user ? (
-              <div className="p-8 text-center max-w-md mx-auto">
-                <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-brand-gradient text-primary-foreground shadow-lg mb-4">
-                  <Lock className="size-8" />
-                </div>
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground">
-                  Login Required to Scan QR Codes
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Camera scanning and in-browser image decoding are restricted to registered users. Sign in or register for free to unlock instant QR code scanning.
-                </p>
-                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
-                  <Button asChild className="w-full sm:w-auto bg-brand-gradient text-primary-foreground font-bold shadow-md rounded-xl h-11 px-6">
-                    <Link to="/auth" search={{ redirect: "/scanner" }}>
-                      <LogIn className="mr-2 size-4" /> Log In to Scan
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="w-full sm:w-auto rounded-xl h-11 px-6">
-                    <Link to="/auth" search={{ redirect: "/scanner" }}>
-                      Create Free Account
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            ) : (
               <>
                 {/* Live Camera Video */}
                 <video
@@ -731,7 +700,6 @@ function Scanner() {
                   </div>
                 ) : null}
               </>
-            )}
           </div>
 
           {/* Error Banner if Permission Blocked */}
@@ -748,16 +716,7 @@ function Scanner() {
           ) : null}
 
           {/* Action Buttons Toolbar */}
-          {!user ? (
-            <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <Button asChild size="lg" className="h-12 rounded-xl bg-brand-gradient text-sm font-bold text-primary-foreground shadow-brand cursor-pointer">
-                <Link to="/auth" search={{ redirect: "/scanner" }}>
-                  <Lock className="mr-2 size-4" /> Log In to Use Camera &amp; Image Scanner
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {scanning ? (
                 <Button
                   variant="outline"
@@ -823,7 +782,6 @@ function Scanner() {
                 </Button>
               ) : null}
             </div>
-          )}
 
           <p className="mt-3 text-center sm:text-left text-[11px] text-muted-foreground">
             Supports PNG, JPG, WebP, SVG screenshots, receipts &amp; counter standees. Clipboard paste (Ctrl+V) enabled.

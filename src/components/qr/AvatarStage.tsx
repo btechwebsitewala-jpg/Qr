@@ -182,19 +182,7 @@ export function AvatarStage({
   };
 
   const handleDownloadClick = () => {
-    if (!user) {
-      toast.error("Authentication required", {
-        description: "Please log in to generate and download standees.",
-      });
-      return;
-    }
-    // If user is on a paid plan (Lite or Premium) or demo, allow direct download
-    if (isPaid) {
-      void executeDownload(false);
-    } else {
-      // Free tier: trigger plan upgrade modal
-      setShowUpgradeModal(true);
-    }
+    void executeDownload(false);
   };
 
   return (
@@ -214,60 +202,17 @@ export function AvatarStage({
         className="pointer-events-none absolute -bottom-20 -left-20 size-72 rounded-full bg-chart-2/10 blur-3xl"
       />
 
-      {!user ? (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-3.5 sm:p-4 text-xs shadow-xs">
-          <div className="flex items-center gap-2.5 text-foreground font-semibold">
-            <Lock className="size-4.5 text-primary shrink-0" />
-            <span>Login required to generate and download printable 3D standees &amp; posters.</span>
-          </div>
-          <Button asChild size="sm" className="h-8 rounded-xl bg-brand-gradient text-xs font-bold text-primary-foreground shadow-xs shrink-0">
-            <Link to="/auth">
-              <LogIn className="mr-1.5 size-3.5" /> Log In
-            </Link>
-          </Button>
-        </div>
-      ) : null}
-
-      {/* Header bar with Plan status and simulator switch */}
+      {/* Header bar with 100% Free status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/70 pb-3.5 sm:pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge className="border-0 bg-primary/15 text-primary font-bold px-2.5 sm:px-3 py-1 text-xs">
             <Sparkles className="mr-1.5 size-3.5 animate-pulse shrink-0" />
             3D Character Signage Studio
           </Badge>
-          {isPaid ? (
-            <Badge className="border-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-0.5 text-[11px] sm:text-xs">
-              <Crown className="mr-1 size-3 text-amber-500 shrink-0" />
-              {isPremium ? "Premium (Unlimited)" : "Lite Plan (Active)"}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 font-medium text-[11px] sm:text-xs">
-              Free Plan
-            </Badge>
-          )}
-        </div>
-
-        {/* Plan simulation quick switch for testing / previewing */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground self-start sm:self-auto">
-          <span className="hidden sm:inline">Plan Mode:</span>
-          <button
-            type="button"
-            onClick={() => setSimulatedPlan(isPaid ? "free" : "premium")}
-            className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-secondary/50 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer"
-            title="Click to toggle between Free and Paid mode for testing"
-          >
-            {isPaid ? (
-              <>
-                <Crown className="size-3 text-amber-500" />
-                <span>Simulate: Paid Plan</span>
-              </>
-            ) : (
-              <>
-                <Zap className="size-3 text-primary" />
-                <span>Simulate: Free (Click to Test)</span>
-              </>
-            )}
-          </button>
+          <Badge className="border-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-0.5 text-[11px] sm:text-xs">
+            <Sparkles className="mr-1 size-3 text-emerald-500 shrink-0" />
+            100% Free Forever
+          </Badge>
         </div>
       </div>
 
@@ -606,48 +551,18 @@ export function AvatarStage({
                     <Download className="mr-2 size-4 shrink-0" />
                   )}
                   <span className="truncate">
-                    {isPaid
-                      ? `Download Standee (${exportFormat.toUpperCase()})`
-                      : `Download Standee (${exportFormat.toUpperCase()}) - Paid`}
+                    Download Standee ({exportFormat.toUpperCase()}) — Free
                   </span>
                 </Button>
-
-                {!isPaid ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="w-full sm:w-auto h-11 sm:h-12 rounded-xl border-border/80 text-xs font-semibold cursor-pointer hover:bg-secondary shrink-0"
-                    disabled={downloading}
-                    onClick={() => void executeDownload(true)}
-                    title="Download a free preview poster with a small watermark"
-                  >
-                    <Sparkles className="mr-1.5 size-3.5 text-primary shrink-0" />
-                    Free Demo Download
-                  </Button>
-                ) : null}
               </div>
             )}
 
             <p className="text-[11px] text-muted-foreground text-center">
-              {!user
-                ? "Sign in or create a free account to customize and export standees."
-                : isPaid
-                  ? "✓ Watermark-free commercial high-res export included in your paid plan."
-                  : "Included in Lite & Premium plans. Click above to export or test free demo."}
+              ✓ 100% Free high-res commercial export with no watermarks or restrictions.
             </p>
           </div>
         </div>
       </div>
-
-      {/* Plan Upgrade Modal */}
-      <PlanUpgradeModal
-        open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
-        onTryWatermarkedDemo={() => void executeDownload(true)}
-        featureTitle="3D Character Standee & Mascot Generator"
-        featureDescription="Print commercial store signs and restaurant table tents with 3D characters or your own store mascot holding your live QR code. Unlocked on Lite (10/mo) and Premium (Unlimited) plans."
-      />
     </div>
   );
 }

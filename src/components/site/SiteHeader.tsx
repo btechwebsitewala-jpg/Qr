@@ -46,7 +46,7 @@ import { useUserPlan } from "@/hooks/useUserPlan";
 const ABOUT_ITEMS = [
   { to: "/types", label: "QR Code Types", hint: "17+ formats ready to generate" },
   { to: "/convert", label: "File to Link", hint: "Upload PDF, audio & video up to 500 MB" },
-  { to: "/compare", label: "Compare Features", hint: "See how BT-QR beats competitors" },
+  { to: "/scanner", label: "QR Scanner", hint: "Scan QR codes with camera or image" },
 ] as const;
 
 const INDUSTRY_ITEMS = [
@@ -156,26 +156,6 @@ export function SiteHeader() {
                 >
                   <ScanLine className="size-5 text-muted-foreground" />
                   <span>QR Scanner</span>
-                </Link>
-
-                {/* 4. Pricing */}
-                <Link
-                  to="/pricing"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                >
-                  <CreditCard className="size-5 text-muted-foreground" />
-                  <span>Pricing</span>
-                </Link>
-
-                {/* 5. Compare */}
-                <Link
-                  to="/compare"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                >
-                  <Columns3 className="size-5 text-muted-foreground" />
-                  <span>Compare</span>
                 </Link>
 
                 {/* 6. Industries (Collapsible) */}
@@ -353,24 +333,6 @@ export function SiteHeader() {
             <span>Scanner</span>
           </Link>
 
-          <Link
-            to="/pricing"
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            activeProps={{ className: "text-foreground bg-secondary font-semibold" }}
-          >
-            <CreditCard className="size-4" />
-            <span>Pricing</span>
-          </Link>
-
-          <Link
-            to="/compare"
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            activeProps={{ className: "text-foreground bg-secondary font-semibold" }}
-          >
-            <Columns3 className="size-4" />
-            <span>Compare</span>
-          </Link>
-
           {/* Industries Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none data-[state=open]:bg-secondary data-[state=open]:text-foreground">
@@ -483,12 +445,6 @@ export function SiteHeader() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem asChild className="rounded-xl px-2.5 py-2 cursor-pointer">
-                    <Link to="/pricing" className="flex items-center gap-2 text-xs font-medium text-foreground">
-                      <Sparkles className="size-4 text-amber-500" />
-                      <span>Subscription Plan</span>
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator className="my-1 border-border/60" />
                   <DropdownMenuItem
                     onClick={() => void signOut()}

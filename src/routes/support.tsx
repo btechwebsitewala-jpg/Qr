@@ -82,8 +82,8 @@ const FAQS = [
     a: "Yes. A free BT-QR account is required to generate QR codes, customize frames, download high-resolution vector files, and access our file converter and scanner services. Registration is 100% free and takes less than 30 seconds.",
   },
   {
-    q: "How do I upgrade or get GST invoices for my business?",
-    a: "You can upgrade to our Lite or Premium plans from the Pricing page. We support Indian UPI, Credit/Debit cards, NetBanking, and automated GST tax invoices for business expense reimbursement.",
+    q: "Is BT-QR completely free to use?",
+    a: "Yes! BT-QR is 100% Free Forever. All 17+ QR types, dynamic links with live destination edit, high-resolution vector downloads (SVG, PDF, PNG), 3D character standees, file-to-link hosting (up to 500 MB), scanner, and real-time scan analytics are completely free without any subscriptions or paywalls.",
   },
 ];
 
@@ -244,22 +244,22 @@ function SupportPage() {
             </div>
           </div>
 
-          {/* Card 3: Priority Resolution */}
-          <div className="flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-sm backdrop-blur-md min-w-0 overflow-hidden sm:col-span-2 lg:col-span-1 hover:border-primary/40 transition-all">
+          {/* Card 3: 100% Free Forever */}
+          <div className="flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-sm backdrop-blur-md min-w-0 overflow-hidden sm:col-span-2 lg:col-span-1 hover:border-emerald-500/40 transition-all">
             <div>
               <div className="flex items-center justify-between">
-                <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs">
-                  <LifeBuoy className="size-5.5" />
+                <span className="flex size-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs">
+                  <Sparkles className="size-5.5 text-emerald-500" />
                 </span>
-                <Badge className="border-0 bg-primary/15 text-primary text-[10px] font-bold py-0.5 px-2">
-                  PAID PLANS
+                <Badge className="border-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold py-0.5 px-2">
+                  100% FREE
                 </Badge>
               </div>
               <h2 className="mt-4 font-display text-base sm:text-lg font-bold text-foreground">
-                Priority Resolution
+                All Features Unlocked
               </h2>
               <p className="mt-1 text-xs sm:text-sm text-muted-foreground leading-snug">
-                Guaranteed reply within 24 hours. VIP technical review for Lite and Premium members.
+                No paywalls, subscriptions, or credit cards needed. Create, edit, and track unlimited QR codes for free.
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-border/60">
@@ -269,7 +269,7 @@ function SupportPage() {
                 size="sm"
                 className="w-full text-xs font-semibold rounded-xl h-9 hover:bg-secondary"
               >
-                <Link to="/pricing">Explore Lite &amp; Premium</Link>
+                <Link to="/">Create Free QR Code</Link>
               </Button>
             </div>
           </div>

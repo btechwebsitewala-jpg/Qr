@@ -99,6 +99,26 @@ export const Route = createFileRoute("/api/dynamic-routes")({
             );
           }
 
+          // Live scan event recording from client fallback
+          if ((body?.action === "record_scan" || body?.action === "scan") && body?.short_code) {
+            const code = body.short_code.toLowerCase().trim();
+            const { detectDevice, detectBrowser } = await import("@/lib/qr/dynamic-registry.server");
+            const ua = request.headers.get("user-agent") || "";
+            const bRecord = body as Record<string, string>;
+            const newCount = recordDynamicScan(code, {
+              device_type: bRecord?.["device_type"] || detectDevice(ua),
+              browser: bRecord?.["browser"] || detectBrowser(ua),
+              country: bRecord?.["country"] || request.headers.get("cf-ipcountry") || "India",
+              city: bRecord?.["city"] || request.headers.get("cf-ipcity") || "New Delhi",
+              referrer: bRecord?.["referrer"] || request.headers.get("referer") || "Direct Camera Scan",
+            });
+            const updated = getDynamicRoute(code);
+            return new Response(
+              JSON.stringify({ success: true, scan_count: newCount, record: updated }),
+              { headers: { "content-type": "application/json" } },
+            );
+          }
+
           if (!body?.short_code || !body?.target_url) {
             return new Response(
               JSON.stringify({ error: "Missing required short_code or target_url" }),
@@ -112,6 +132,22 @@ export const Route = createFileRoute("/api/dynamic-routes")({
             name: body.name,
             scan_count: body.scan_count,
           });
+
+          // Sync to Supabase via admin client if the QR exists in Supabase
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const cleanCode = body.short_code.toLowerCase().trim();
+            await supabaseAdmin
+              .from("qr_codes")
+              .update({
+                target_url: body.target_url,
+                name: body.name ?? "QR Code",
+                updated_at: new Date().toISOString(),
+              } as never)
+              .eq("short_code", cleanCode);
+          } catch {
+            // ignore network/db error
+          }
 
           return new Response(JSON.stringify({ success: true, record: saved }), {
             headers: { "content-type": "application/json" },

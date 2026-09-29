@@ -18,5 +18,12 @@ export default defineConfig({
   resolve: {
     dedupe: ["react", "react-dom"],
   },
+  server: {
+    host: "0.0.0.0",
+    port: 3000,
+    watch: {
+      ignored: ["**/data/**", "**/src/data/**", "**/.vercel/**"],
+    },
+  },
 });
 

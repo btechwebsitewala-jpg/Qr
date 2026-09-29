@@ -109,7 +109,7 @@ function Analytics() {
         is_dynamic: true,
         short_code: code,
         target_url: targetUrl,
-        encoded_value: shortUrl(code),
+        encoded_value: targetUrl,
       });
     },
     onSuccess: async () => {
@@ -181,11 +181,13 @@ function Analytics() {
   }
 
   const row = qr.data;
-  const style: QRStyle = { ...DEFAULT_STYLE, ...(row.style ?? {}) };
+  const style: QRStyle = { ...DEFAULT_STYLE, ...(row?.style ?? {}) };
+  const totalScans = Math.max(row?.scan_count ?? 0, scanList.length);
   const devices = byKey("device_type");
   const countries = byKey("country");
   const browsers = byKey("browser");
-  const totalScans = Math.max(row.scan_count, scanList.length);
+  const devicesTotal = devices.reduce((sum, d) => sum + d.value, 0) || totalScans || 1;
+  const seriesTotal = series.reduce((sum, s) => sum + s.scans, 0);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
@@ -342,7 +344,9 @@ function Analytics() {
             <p className="text-xs text-muted-foreground">Daily scan distribution and volume</p>
           </div>
           <span className="text-xs font-semibold text-muted-foreground bg-secondary px-2.5 py-1 rounded-xl">
-            {totalScans} Total Scans Logged
+            {seriesTotal > 0 && seriesTotal !== totalScans
+              ? `${seriesTotal} Scans (14 Days) · ${totalScans} Total`
+              : `${totalScans} Total Scans Logged`}
           </span>
         </div>
 
@@ -421,7 +425,7 @@ function Analytics() {
                       <span className="font-medium text-foreground">{d.name}</span>
                     </span>
                     <span className="font-semibold text-muted-foreground">
-                      {d.value} ({Math.round((d.value / (totalScans || 1)) * 100)}%)
+                      {d.value} ({Math.round((d.value / devicesTotal) * 100)}%)
                     </span>
                   </div>
                 ))}
@@ -588,25 +592,30 @@ function BreakdownList({
   rows: { name: string; value: number }[];
   totalScans: number;
 }) {
-  const total = totalScans || 1;
+  const categoryTotal = rows.reduce((sum, r) => sum + r.value, 0) || totalScans || 1;
   return (
     <div>
       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</h3>
       <ul className="mt-3 space-y-2.5">
-        {rows.slice(0, 5).map((row) => (
-          <li key={row.name}>
-            <div className="flex justify-between text-xs">
-              <span className="font-semibold text-foreground">{row.name}</span>
-              <span className="text-muted-foreground">{row.value}</span>
-            </div>
-            <div className="mt-1 h-2 rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-2 rounded-full bg-brand-gradient"
-                style={{ width: `${Math.min(100, Math.round((row.value / total) * 100))}%` }}
-              />
-            </div>
-          </li>
-        ))}
+        {rows.slice(0, 5).map((row) => {
+          const pct = Math.round((row.value / categoryTotal) * 100);
+          return (
+            <li key={row.name}>
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-foreground">{row.name}</span>
+                <span className="font-semibold text-muted-foreground">
+                  {row.value} ({pct}%)
+                </span>
+              </div>
+              <div className="mt-1 h-2 rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-2 rounded-full bg-brand-gradient"
+                  style={{ width: `${Math.min(100, pct)}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
         {rows.length === 0 ? <li className="text-xs text-muted-foreground">No data</li> : null}
       </ul>
     </div>

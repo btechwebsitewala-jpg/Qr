@@ -28,8 +28,7 @@ const FEATURE_LINKS = [
   { to: "/", label: "QR Code Generator" },
   { to: "/scanner", label: "Web QR Scanner" },
   { to: "/convert", label: "File to Link (500 MB)" },
-  { to: "/compare", label: "Static vs Dynamic Codes" },
-  { to: "/pricing", label: "Vector Exports (SVG/PDF)" },
+  { to: "/types", label: "All 17+ QR Formats" },
   { to: "/dashboard", label: "Live Scan Analytics" },
 ] as const;
 
@@ -43,8 +42,7 @@ const INDUSTRY_LINKS = [
 ] as const;
 
 const COMPANY_LINKS = [
-  { to: "/pricing", label: "Pricing in INR (₹)" },
-  { to: "/compare", label: "Feature Comparison" },
+  { to: "/types", label: "All QR Code Types" },
   { to: "/support", label: "Support & FAQs" },
   { to: "/auth", label: "Login / Sign up" },
   { to: "/dashboard", label: "Workspace Dashboard" },
@@ -160,9 +158,9 @@ export function SiteFooter() {
           </ul>
         </div>
 
-        {/* Industries & Pricing */}
+        {/* Solutions & Resources */}
         <div>
-          <h3 className="font-display text-base font-bold text-foreground">Solutions &amp; Pricing</h3>
+          <h3 className="font-display text-base font-bold text-foreground">Solutions &amp; Resources</h3>
           <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {COMPANY_LINKS.map((item) => (
               <li key={item.label}>
@@ -200,8 +198,8 @@ export function SiteFooter() {
               Help Center
             </Link>
             <span>•</span>
-            <Link to="/pricing" className="hover:text-foreground hover:underline decoration-2">
-              GST Invoicing
+            <Link to="/support" className="hover:text-foreground hover:underline decoration-2">
+              Contact &amp; FAQs
             </Link>
           </div>
         </div>
